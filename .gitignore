@@ -1,0 +1,41 @@
+# Local OS/editor files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+/config/master.key
+/config/credentials/*.key
+
+# Bundler
+/.bundle/
+/vendor/bundle/
+
+# Logs and runtime files
+/log/*
+!/log/.keep
+/tmp/*
+!/tmp/.keep
+
+# Local SQLite databases and uploaded files
+/storage/*
+!/storage/.keep
+*.sqlite3
+*.sqlite3-*
+
+# Asset and dependency caches
+/app/assets/builds/*
+!/app/assets/builds/.keep
+/public/assets/
+node_modules/
+.npm/
+.yarn/cache/
+.yarn/install-state.gz
+
+# Test and coverage output
+/coverage/

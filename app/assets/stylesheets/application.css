@@ -1,0 +1,739 @@
+/*
+ * This is a manifest file that'll be compiled into application.css.
+ *
+ * With Propshaft, assets are served efficiently without preprocessing steps. You can still include
+ * application-wide styles in this file, but keep in mind that CSS precedence will follow the standard
+ * cascading order, meaning styles declared later in the document or manifest will override earlier ones,
+ * depending on specificity.
+ *
+ * Consider organizing styles into separate files for maintainability.
+ */
+
+:root {
+  color-scheme: dark;
+  --bg: #101316;
+  --surface: #181d21;
+  --surface-2: #22282d;
+  --line: #38424a;
+  --text: #eef2f5;
+  --muted: #9daab3;
+  --accent: #4fa3ff;
+  --green: #4fb06d;
+  --yellow: #d4a72c;
+  --red: #e35b5b;
+  --violet: #9f7aea;
+  --cyan: #4bb6b7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.boot-panel {
+  padding: 32px;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.topbar {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--line);
+  background: #12171a;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0;
+}
+
+.subtitle,
+.muted {
+  color: var(--muted);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: calc(100vh - 72px);
+}
+
+.side-nav {
+  padding: 16px;
+  border-right: 1px solid var(--line);
+  background: #14191d;
+}
+
+.nav-link {
+  display: block;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.screen {
+  padding: 22px;
+  overflow: auto;
+}
+
+.screen-title {
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.spread {
+  justify-content: space-between;
+}
+
+.panel,
+.summary-card,
+.line-row,
+.incident-row,
+.car-card {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+}
+
+.panel {
+  padding: 16px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.summary-card {
+  padding: 16px;
+}
+
+.summary-label,
+.metric-label {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.summary-value {
+  display: block;
+  margin-top: 8px;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.line-list,
+.incident-list,
+.stack,
+.comment-list {
+  display: grid;
+  gap: 12px;
+}
+
+.line-row,
+.incident-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+}
+
+.control-grid,
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+}
+
+.main-column,
+.side-column,
+.replay-layout {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.line-command-bar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #14191d;
+}
+
+.line-title-block {
+  display: grid;
+  gap: 3px;
+}
+
+.line-title-block h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.line-chip-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-metric {
+  display: grid;
+  min-width: 104px;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #10161a;
+}
+
+.status-metric-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status-metric-value {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.map-panel,
+.fleet-panel,
+.primary-command-panel {
+  padding: 14px;
+}
+
+.panel-heading {
+  margin-bottom: 10px;
+}
+
+.system-pill,
+.status-chip,
+.severity-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.line-map {
+  position: relative;
+  min-height: 280px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, transparent 0 48%, rgba(255, 255, 255, 0.08) 48% 52%, transparent 52%),
+    #151b1f;
+}
+
+.line-map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.track-line {
+  display: none;
+}
+
+.station-marker,
+.map-car {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.station-marker {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+}
+
+.station-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 3px solid var(--cyan);
+  background: var(--surface);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.station-alert .station-dot {
+  border-color: var(--red);
+  background: rgba(227, 91, 91, 0.28);
+  box-shadow: 0 0 0 6px rgba(227, 91, 91, 0.12);
+  animation: station-alert-pulse 1.2s ease-in-out infinite;
+}
+
+.station-crowded .station-dot {
+  border-color: var(--yellow);
+}
+
+.station-closed .station-dot {
+  border-color: var(--muted);
+  background: #333b42;
+}
+
+.station-label,
+.car-meta {
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.map-car {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 90px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+  background: #11171b;
+  cursor: pointer;
+  z-index: 2;
+  transition: left 280ms ease, top 280ms ease, border-color 180ms ease;
+}
+
+.map-car.selected,
+.car-card.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.car-code {
+  font-weight: 800;
+}
+
+.car-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.car-card {
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 180ms ease, background-color 180ms ease, outline-color 180ms ease;
+}
+
+.map-car:hover,
+.car-card:hover {
+  border-color: var(--accent);
+}
+
+.car-card h3,
+.panel h3,
+.line-row h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.car-idle {
+  color: #c2c8cd;
+  border-color: #555f68;
+}
+
+.car-running {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.car-slow {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+
+.car-stopped {
+  color: #b8c0c7;
+  border-color: #7d8790;
+}
+
+.car-emergency {
+  color: var(--red);
+  border-color: var(--red);
+  background: rgba(227, 91, 91, 0.12);
+}
+
+.car-maintenance {
+  color: var(--violet);
+  border-color: var(--violet);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.metric-value {
+  display: block;
+  margin-top: 3px;
+  font-weight: 700;
+}
+
+.button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.button:hover {
+  filter: brightness(1.08);
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.button.primary,
+.dispatch.start {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #071018;
+  font-weight: 800;
+}
+
+.button.secondary {
+  background: #283039;
+}
+
+.button.compact {
+  min-height: 30px;
+  padding: 5px 9px;
+}
+
+.dispatch-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.primary-command-panel {
+  border-color: rgba(79, 163, 255, 0.55);
+  background: #151b20;
+}
+
+.selected-car-summary {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 6px;
+  background: #10161a;
+}
+
+.selected-car-name {
+  font-weight: 800;
+}
+
+.empty-command-state {
+  min-height: 80px;
+  display: grid;
+  align-items: center;
+}
+
+.compact-panel {
+  padding: 14px;
+}
+
+.command-row,
+.station-list {
+  margin-top: 10px;
+}
+
+.station-list {
+  display: grid;
+  gap: 8px;
+}
+
+.station-control-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #10161a;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.station-control-alert {
+  border-color: rgba(227, 91, 91, 0.75);
+  background: rgba(227, 91, 91, 0.1);
+}
+
+.station-name {
+  font-weight: 800;
+}
+
+.station-actions {
+  flex-wrap: nowrap;
+}
+
+.dispatch.stop {
+  background: #4c555e;
+}
+
+.dispatch.slow {
+  background: var(--yellow);
+  color: #191200;
+}
+
+.dispatch.emergency {
+  grid-column: span 2;
+  background: var(--red);
+  color: #170606;
+  font-weight: 900;
+}
+
+.dispatch.recover {
+  background: var(--cyan);
+  color: #061415;
+}
+
+.input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #10161a;
+  color: var(--text);
+}
+
+.textarea {
+  min-height: 86px;
+  resize: vertical;
+}
+
+.input-error {
+  border-color: var(--red);
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field.inline {
+  display: flex;
+  align-items: center;
+}
+
+.field-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.notice {
+  color: var(--green);
+}
+
+.form-error {
+  color: var(--red);
+}
+
+.operation-log {
+  margin-top: 0;
+}
+
+.line-lower-grid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.log-list {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+  margin-top: 10px;
+}
+
+.log-item {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #10161a;
+  border: 1px solid transparent;
+}
+
+.log-item-new {
+  background: #111b20;
+  border-color: rgba(79, 163, 255, 0.32);
+}
+
+.log-time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.title-link {
+  color: var(--text);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.severity-low {
+  background: rgba(79, 163, 255, 0.15);
+  color: #8ec6ff;
+}
+
+.severity-medium {
+  background: rgba(212, 167, 44, 0.16);
+  color: #f0c85d;
+}
+
+.severity-high {
+  background: rgba(232, 132, 74, 0.16);
+  color: #f1a06d;
+}
+
+.severity-critical {
+  background: rgba(227, 91, 91, 0.18);
+  color: #ff8a8a;
+}
+
+.comment {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  background: #10161a;
+}
+
+.comment-author {
+  font-weight: 800;
+}
+
+.incident-photo {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin: 12px 0;
+}
+
+.error-panel {
+  padding: 16px;
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  background: rgba(227, 91, 91, 0.12);
+}
+
+@keyframes station-alert-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba(227, 91, 91, 0.1);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(227, 91, 91, 0.2);
+  }
+}
+
+@media (max-width: 960px) {
+  .workspace,
+  .control-grid,
+  .detail-grid,
+  .line-command-bar,
+  .line-lower-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .line-chip-row {
+    justify-content: stretch;
+  }
+
+  .status-metric {
+    min-width: 0;
+    flex: 1 1 130px;
+  }
+
+  .side-nav {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .workspace {
+    display: block;
+  }
+
+  .summary-grid,
+  .car-grid {
+    grid-template-columns: 1fr;
+  }
+}
