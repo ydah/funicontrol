@@ -52,6 +52,9 @@ class CarShowComponent < ApplicationComponent
                   metric("Position", "#{percent_position(state.car)}%")
                   metric("Direction", value(state.car, :direction).to_s)
                   metric("Speed", value(state.car, :speed).to_s)
+                  metric("Mode", value(state.car, :operation_mode).to_s)
+                  metric("Next", next_station_name(state.car))
+                  metric("ETA", eta_label(state.car))
                 end
                 p(class: "muted") { "Connection: #{state.connection_status}" }
                 link_to "/lines/#{value(state.car, :line_id)}", navigate: true, class: "button secondary" do
@@ -64,6 +67,8 @@ class CarShowComponent < ApplicationComponent
               component(DispatchConsoleComponent,
                 car: state.car,
                 line_id: value(state.car, :line_id),
+                line_status: "normal",
+                disabled: offline?,
                 on_dispatch: method(:handle_dispatch_response)
               )
             end
@@ -155,5 +160,17 @@ class CarShowComponent < ApplicationComponent
       latest_id = event_id if event_id > latest_id
     end
     latest_id
+  end
+
+  def next_station_name(car)
+    station = value(car, :next_station)
+    value(station, :name).to_s
+  end
+
+  def eta_label(car)
+    seconds = value(car, :eta_seconds).to_i
+    return "-" if seconds <= 0
+
+    "#{seconds}s"
   end
 end

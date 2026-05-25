@@ -6,6 +6,7 @@ class CarCardComponent < ApplicationComponent
       slow: "car-slow",
       stopped: "car-stopped",
       emergency: "car-emergency",
+      inspection_required: "car-inspection_required",
       maintenance: "car-maintenance"
     }
   end
@@ -24,6 +25,9 @@ class CarCardComponent < ApplicationComponent
         metric("Position", "#{percent_position(car)}%")
         metric("Direction", value(car, :direction).to_s)
         metric("Speed", value(car, :speed).to_s)
+        metric("Mode", value(car, :operation_mode).to_s)
+        metric("Next", next_station_name(car))
+        metric("ETA", eta_label(car))
       end
       div(class: "row") do
         button(class: "button compact primary", onclick: -> { select_car(car) }) { props[:selected] ? "In control" : "Control" }
@@ -43,5 +47,17 @@ class CarCardComponent < ApplicationComponent
 
   def select_car(car)
     props[:on_select].call(object_id(car)) if props[:on_select]
+  end
+
+  def next_station_name(car)
+    station = value(car, :next_station)
+    value(station, :name).to_s
+  end
+
+  def eta_label(car)
+    seconds = value(car, :eta_seconds).to_i
+    return "-" if seconds <= 0
+
+    "#{seconds}s"
   end
 end

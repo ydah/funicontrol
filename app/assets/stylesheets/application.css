@@ -73,6 +73,12 @@ textarea {
   color: var(--muted);
 }
 
+.topbar-pills {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: 220px 1fr;
@@ -136,7 +142,7 @@ textarea {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -287,6 +293,19 @@ textarea {
   pointer-events: none;
 }
 
+.canvas-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: #151b1f;
+}
+
+.canvas-fallback[hidden] {
+  display: none;
+}
+
 .track-line {
   display: none;
 }
@@ -329,10 +348,33 @@ textarea {
 }
 
 .station-label,
+.station-state,
 .car-meta {
   white-space: nowrap;
   color: var(--muted);
   font-size: 12px;
+}
+
+.station-state {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #10161a;
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.passing-loop-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  padding: 4px 7px;
+  border: 1px solid var(--cyan);
+  border-radius: 6px;
+  background: rgba(75, 182, 183, 0.14);
+  color: #9ce1e2;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .map-car {
@@ -414,9 +456,15 @@ textarea {
   border-color: var(--violet);
 }
 
+.car-inspection_required {
+  color: var(--violet);
+  border-color: var(--violet);
+  background: rgba(159, 122, 234, 0.12);
+}
+
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin: 12px 0;
 }
@@ -532,6 +580,8 @@ textarea {
 
 .station-actions {
   flex-wrap: nowrap;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .dispatch.stop {
@@ -563,6 +613,11 @@ textarea {
   padding: 8px 10px;
   background: #10161a;
   color: var(--text);
+}
+
+.compact-input {
+  width: auto;
+  min-width: 130px;
 }
 
 .textarea {
@@ -607,6 +662,23 @@ textarea {
   grid-template-columns: 360px minmax(0, 1fr);
   gap: 16px;
   margin-top: 16px;
+}
+
+.quick-template-row,
+.log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .log-list {
@@ -661,6 +733,15 @@ textarea {
 .severity-critical {
   background: rgba(227, 91, 91, 0.18);
   color: #ff8a8a;
+}
+
+.line-status-normal {
+  color: var(--green);
+}
+
+.line-status-suspended,
+.line-status-maintenance {
+  color: var(--yellow);
 }
 
 .comment {

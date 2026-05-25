@@ -11,8 +11,7 @@
 
     <%= yield :head %>
 
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+    <%= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
 
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
@@ -26,6 +25,11 @@
     <%= javascript_include_tag "line_map_renderer" %>
     <%= javascript_include_tag "operation_log_scroll" %>
     <%= javascript_include_tag "funicontrol_upload" %>
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/service-worker.js");
+      }
+    </script>
     <%= picoruby_include_tag %>
     <% app_mrb = Rails.root.join("app/assets/builds/app.mrb") %>
     <% app_mrb_version = app_mrb.exist? ? app_mrb.mtime.to_i : Time.current.to_i %>

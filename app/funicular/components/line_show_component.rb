@@ -8,12 +8,14 @@ class LineShowComponent < ApplicationComponent
     on_resolve: ->(line) {
       cars = value(line, :cars) || []
       stations = value(line, :stations) || []
-      selected = cars.empty? ? nil : cars.first
+      track_segments = value(line, :track_segments) || []
+      selected = selection_from_url(cars) || (cars.empty? ? nil : cars.first)
       SelectedLineStore.where.value = props[:id]
       patch(
         line: line,
         cars: cars,
         stations: stations,
+        track_segments: track_segments,
         selected_car_id: selection_id(selected),
         selected_car_code: selection_code(selected),
         is_loading: false
@@ -65,12 +67,15 @@ class LineShowComponent < ApplicationComponent
     {
       line: nil,
       stations: [],
+      track_segments: [],
       cars: [],
       incidents: [],
       operation_events: [],
       selected_car_id: nil,
       selected_car_code: nil,
       connection_status: "connecting",
+      last_sequence: 0,
+      chat_message: "",
       is_loading: true,
       error: nil
     }
@@ -107,6 +112,8 @@ class LineShowComponent < ApplicationComponent
           div(class: "line-chip-row") do
             status_chip("Connection", state.connection_status)
             status_chip("Line", value(state.line, :status))
+            status_chip("Weather", value(state.line, :weather_condition))
+            status_chip("Score", value(state.line, :passenger_satisfaction_score))
             status_chip("Cars", state.cars.length.to_s)
             status_chip("Open incidents", state.incidents.length.to_s)
           end
@@ -125,6 +132,7 @@ class LineShowComponent < ApplicationComponent
                   line: state.line,
                   stations: state.stations,
                   cars: state.cars,
+                  track_segments: state.track_segments,
                   selected_car_id: selected_car_id,
                   on_select: method(:select_car)
                 )
@@ -150,18 +158,23 @@ class LineShowComponent < ApplicationComponent
             component(DispatchConsoleComponent,
               car: selected_car,
               line_id: props[:id],
+              line_status: value(state.line, :status),
+              disabled: offline?,
               on_dispatch: method(:handle_dispatch_response),
               on_error: method(:handle_dispatch_error)
             )
             component(LineStatusPanelComponent,
               line: state.line,
+              disabled: offline?,
               on_line_updated: method(:handle_line_status_response)
             )
             component(StationPanelComponent,
               line_id: props[:id],
               stations: state.stations,
+              disabled: offline?,
               on_station_updated: method(:handle_station_response)
             )
+            render_operator_chat
           end
         end
         div(class: "line-lower-grid") do
@@ -195,6 +208,7 @@ class LineShowComponent < ApplicationComponent
     end
     @subscription.on_connected do
       patch(connection_status: "connected")
+      poll_operation_events
     end
     @subscription.on_rejected do
       patch(connection_status: "rejected")
@@ -202,8 +216,12 @@ class LineShowComponent < ApplicationComponent
   end
 
   def handle_line_message(message)
+    patch(last_sequence: message["sequence"].to_i) if message["sequence"].to_i > 0
     type = message["type"]
-    if type == "car_position_updated" || type == "operation_event"
+    if type == "cars_updated"
+      patch_cars_payload(message["cars"])
+      safe_append_operation_events(message["events"])
+    elsif type == "car_position_updated" || type == "operation_event"
       patch_car_payload(message["car"])
       safe_append_operation_event(message["event"])
     elsif type == "incident_created"
@@ -213,6 +231,8 @@ class LineShowComponent < ApplicationComponent
       patch(incidents: replace_by_id(state.incidents, message["incident"]))
       safe_append_operation_event(message["event"])
     elsif type == "comment_created"
+      safe_append_operation_event(message["event"])
+    elsif type == "operator_message_sent"
       safe_append_operation_event(message["event"])
     elsif type == "station_updated"
       Funicular::HTTP.expire_cache("/api/lines/#{props[:id]}")
@@ -251,6 +271,7 @@ class LineShowComponent < ApplicationComponent
 
   def select_car(car_id)
     car = current_line_cars.find { |item| object_id(item) == car_id.to_i }
+    reflect_selected_car_in_url(car)
     patch(
       selected_car_id: selection_id(car),
       selected_car_code: selection_code(car)
@@ -302,12 +323,14 @@ class LineShowComponent < ApplicationComponent
     line = line_data
     cars = value(line_data, :cars) || state.cars
     stations = value(line_data, :stations) || state.stations
+    track_segments = value(line_data, :track_segments) || state.track_segments
     selected = selection_candidate(cars)
 
     patch(
       line: line,
       cars: cars,
       stations: stations,
+      track_segments: track_segments,
       selected_car_id: selection_id(selected),
       selected_car_code: selection_code(selected)
     )
@@ -317,6 +340,21 @@ class LineShowComponent < ApplicationComponent
     return unless car_data
 
     next_cars = replace_car_by_id_or_code(state.cars, car_data)
+    selected = selection_candidate(next_cars)
+    patch(
+      cars: next_cars,
+      selected_car_id: selection_id(selected),
+      selected_car_code: selection_code(selected)
+    )
+  end
+
+  def patch_cars_payload(cars_data)
+    return unless cars_data
+
+    next_cars = state.cars
+    cars_data.each do |car_data|
+      next_cars = replace_car_by_id_or_code(next_cars, car_data)
+    end
     selected = selection_candidate(next_cars)
     patch(
       cars: next_cars,
@@ -351,6 +389,7 @@ class LineShowComponent < ApplicationComponent
     selected_code = state.selected_car_code.to_s
     cars.find { |car| selected_id > 0 && object_id(car) == selected_id } ||
       cars.find { |car| !selected_code.empty? && value(car, :code).to_s == selected_code } ||
+      selection_from_url(cars) ||
       cars.first
   end
 
@@ -366,6 +405,53 @@ class LineShowComponent < ApplicationComponent
     Funicular::HTTP.get("/api/lines/#{props[:id]}?fresh=#{Time.now.to_i}") do |response|
       patch_line_payload(response.data) if response.ok
     end
+  end
+
+  def selection_from_url(cars)
+    code = query_param("car").to_s
+    return nil if code.empty?
+
+    cars.find { |car| value(car, :code).to_s == code || object_id(car).to_s == code }
+  end
+
+  def reflect_selected_car_in_url(car)
+    return unless car
+    return unless JS.global[:history]
+
+    code = value(car, :code).to_s
+    JS.global.history.replaceState(nil, "", "/lines/#{props[:id]}?car=#{JS.global.encodeURIComponent(code)}")
+  end
+
+  def render_operator_chat
+    div(class: "panel compact-panel") do
+      div(class: "row spread") do
+        h3 { "Operator Chat" }
+        span(class: "muted") { "line channel" }
+      end
+      div(class: "field") do
+        input(
+          class: "input",
+          value: state.chat_message,
+          placeholder: "Message",
+          disabled: offline?,
+          oninput: ->(event) { patch(chat_message: event.target[:value]) }
+        )
+      end
+      button(class: "button secondary", disabled: offline? || state.chat_message.to_s.strip.empty?, onclick: :send_operator_message) { "Send" }
+    end
+  end
+
+  def send_operator_message
+    return unless @subscription
+    message = state.chat_message.to_s.strip
+    return if message.empty?
+
+    prefs = OperatorPrefsStore.where.value || {}
+    @subscription.perform("operator_message", {
+      message: message,
+      operator_name: value(prefs, :operator_name) || "operator"
+    })
+    patch(chat_message: "")
   end
 
   def schedule_line_poll

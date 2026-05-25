@@ -12,7 +12,7 @@ class DispatchConsoleComponent < ApplicationComponent
   end
 
   def initialize_state
-    { reason: "", is_dispatching: false, notice: nil, error: nil }
+    { reason: "", pending_action: nil, is_dispatching: false, notice: nil, error: nil }
   end
 
   def component_mounted
@@ -40,7 +40,8 @@ class DispatchConsoleComponent < ApplicationComponent
           input(
             class: "input",
             value: state.reason,
-            placeholder: "Optional operator note",
+            placeholder: "Operator note",
+            disabled: props[:disabled],
             oninput: ->(event) { patch(reason: event.target[:value]) }
           )
         end
@@ -49,7 +50,7 @@ class DispatchConsoleComponent < ApplicationComponent
           dispatch_button("stop", "Stop")
           dispatch_button("slow", "Slow")
           dispatch_button("emergency_stop", "Emergency")
-          dispatch_button("recover", "Recover")
+          dispatch_button("recover", recover_label)
         end
         p(class: "notice") { state.notice } if state.notice
         p(class: "form-error") { state.error } if state.error
@@ -64,16 +65,26 @@ class DispatchConsoleComponent < ApplicationComponent
   def dispatch_button(action, label_text)
     button(
       class: s.dispatch_button(action.to_sym),
-      disabled: state.is_dispatching,
-      onclick: -> { handle_dispatch(action) }
-    ) { state.is_dispatching ? "..." : label_text }
+      disabled: dispatch_disabled?(action),
+      onclick: -> {
+        if confirm_action?(action)
+          handle_dispatch(action)
+        else
+          patch(pending_action: action, notice: nil, error: nil)
+        end
+      }
+    ) { state.is_dispatching ? "..." : dispatch_label(action, label_text) }
   end
 
   def handle_dispatch(action)
     car_data = props[:car]
     return unless car_data
+    unless reason_valid_for?(action)
+      patch(error: "Reason is required", notice: nil)
+      return
+    end
 
-    patch(is_dispatching: true, notice: nil, error: nil)
+    patch(is_dispatching: true, notice: nil, error: nil, pending_action: nil)
     Car.new(car_data).dispatch(action: action, reason: state.reason, current_line_id: props[:line_id]) do |response|
       if response.ok
         props[:on_dispatch].call(response.data) if props[:on_dispatch]
@@ -87,5 +98,30 @@ class DispatchConsoleComponent < ApplicationComponent
 
   def clear_stale_selection_error
     patch(error: nil) if state.error == STALE_SELECTION_MESSAGE
+  end
+
+  def dispatch_disabled?(action)
+    return true if props[:disabled] || state.is_dispatching
+    return true if %w[start slow].include?(action) && props[:line_status].to_s != "normal"
+
+    false
+  end
+
+  def confirm_action?(action)
+    state.pending_action == action
+  end
+
+  def dispatch_label(action, label_text)
+    confirm_action?(action) ? "Confirm #{label_text}" : label_text
+  end
+
+  def recover_label
+    value(props[:car], :status).to_s == "emergency" ? "Inspect" : "Recover"
+  end
+
+  def reason_valid_for?(action)
+    return true unless action == "emergency_stop"
+
+    state.reason.to_s.strip.length > 0
   end
 end

@@ -19,6 +19,12 @@ class IncidentFormComponent < ApplicationComponent
   def render
     div(class: "panel incident-form") do
       h3 { "Quick Incident" }
+      div(class: "quick-template-row") do
+        incident_template("Lost item", "lost_item", "low", "Lost item reported")
+        incident_template("Crowding", "crowding", "medium", "Station crowding")
+        incident_template("Vehicle stop", "emergency_stop", "critical", "Vehicle stopped")
+        incident_template("Weather", "weather", "high", "Weather restriction")
+      end
       form_for(:incident, on_submit: :handle_submit, class: "stack") do |f|
         field_group("Kind") do
           f.select(:kind, [
@@ -52,13 +58,27 @@ class IncidentFormComponent < ApplicationComponent
         field_group("Description") do
           f.textarea(:description, class: "input textarea", rows: 4)
         end
-        field_group("Photo") do
-          f.file_field(:photo, accept: "image/*", class: "input", onchange: :handle_photo_change)
+        field_group("Attachment") do
+          f.file_field(:photo, accept: "image/*,application/pdf,text/plain", class: "input", onchange: :handle_photo_change)
           p(class: "muted") { "Selected: #{value(state.incident, :photo_name)}" } if value(state.incident, :photo_name)
         end
         f.submit(state.is_submitting ? "Reporting..." : "Report incident", class: "button primary", disabled: state.is_submitting)
       end
     end
+  end
+
+  def incident_template(label_text, kind, severity, title)
+    button(
+      class: "button compact secondary",
+      type: "button",
+      onclick: -> {
+        patch(incident: state.incident.merge(
+          kind: kind,
+          severity: severity,
+          title: title
+        ))
+      }
+    ) { label_text }
   end
 
   def field_group(label_text, &block)

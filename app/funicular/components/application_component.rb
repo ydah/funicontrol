@@ -5,6 +5,7 @@ class ApplicationComponent < Funicular::Component
     "slow" => "Slow",
     "stopped" => "Stopped",
     "emergency" => "Emergency",
+    "inspection_required" => "Inspection required",
     "maintenance" => "Maintenance"
   }
 
@@ -22,7 +23,10 @@ class ApplicationComponent < Funicular::Component
           h1 { "Funicontrol" }
           span(class: "subtitle") { "Mt. Ruby cable control" }
         end
-        span(class: "system-pill") { title }
+        div(class: "topbar-pills") do
+          span(class: "system-pill") { network_label }
+          span(class: "system-pill") { title }
+        end
       end
       div(class: "workspace") do
         component(NavigationComponent)
@@ -141,6 +145,7 @@ class ApplicationComponent < Funicular::Component
 
   def upload_form(method, url, fields, file_field: nil, file_global_key: nil, &block)
     result_key = "_funicontrolUploadResult_#{Time.now.to_i}_#{rand(100_000)}"
+    event_name = "#{result_key}_event"
     safe_fields = {}
     fields.each do |key, field_value|
       next if key.to_s == "photo"
@@ -151,21 +156,18 @@ class ApplicationComponent < Funicular::Component
 
     script = JS.document.createElement("script")
     script[:textContent] = <<~JAVASCRIPT
-      window.FunicontrolUpload.submit(
+      window.addEventListener(#{JSON.generate(event_name)}, function handler(event) {
+        window.removeEventListener(#{JSON.generate(event_name)}, handler);
+        window[#{JSON.generate(result_key)}] = JSON.stringify(event.detail);
+      });
+      window.FunicontrolUpload.submitWithEvent(
         #{JSON.generate(method.to_s.upcase)},
         #{JSON.generate(url)},
         #{JSON.generate(safe_fields)},
         #{JSON.generate(file_field)},
-        #{JSON.generate(file_global_key)}
-      ).then(function(result) {
-        window[#{JSON.generate(result_key)}] = JSON.stringify(result);
-      }).catch(function(error) {
-        window[#{JSON.generate(result_key)}] = JSON.stringify({
-          ok: false,
-          status: 0,
-          data: { errors: { base: [String(error)] } }
-        });
-      });
+        #{JSON.generate(file_global_key)},
+        #{JSON.generate(event_name)}
+      );
     JAVASCRIPT
     JS.document.body.appendChild(script)
     JS.document.body.removeChild(script)
@@ -195,6 +197,27 @@ class ApplicationComponent < Funicular::Component
         status: value(item, :status)
       }
     end
+  end
+
+  def network_label
+    return "offline" if JS.global[:navigator] && JS.global.navigator[:onLine] == false
+
+    "online"
+  end
+
+  def offline?
+    JS.global[:navigator] && JS.global.navigator[:onLine] == false
+  end
+
+  def query_param(name)
+    search = JS.global.location.search.to_s
+    return nil if search.empty?
+
+    search.sub(/^\?/, "").split("&").each do |part|
+      key, value = part.split("=", 2)
+      return JS.global.decodeURIComponent(value.to_s).to_s if key == name.to_s
+    end
+    nil
   end
 
   def hash_value(hash, key)

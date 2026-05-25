@@ -9,7 +9,8 @@ Funicular.load_schemas({
   Car => "car",
   Incident => "incident",
   IncidentComment => "incident_comment",
-  OperationEvent => "operation_event"
+  OperationEvent => "operation_event",
+  TrackSegment => "track_segment"
 }) do
   Funicular.start(container: "app") do |router|
     router.get("/dashboard", to: DashboardComponent, as: "dashboard")

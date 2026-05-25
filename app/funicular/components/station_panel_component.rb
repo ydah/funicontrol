@@ -1,6 +1,6 @@
 class StationPanelComponent < ApplicationComponent
   def initialize_state
-    { reason: "", is_saving: false, notice: nil, error: nil }
+    { reason: "", pending_station_id: nil, pending_action: nil, is_saving: false, notice: nil, error: nil }
   end
 
   def render
@@ -14,7 +14,8 @@ class StationPanelComponent < ApplicationComponent
         input(
           class: "input",
           value: state.reason,
-          placeholder: "Optional alert note",
+          placeholder: "Station note",
+          disabled: props[:disabled],
           oninput: ->(event) { patch(reason: event.target[:value]) }
         )
       end
@@ -36,26 +37,41 @@ class StationPanelComponent < ApplicationComponent
         span(class: "muted") { " #{status} / #{value(station, :passenger_level)}%" }
       end
       div(class: "row station-actions") do
-        button(
-          class: "button compact secondary",
-          disabled: state.is_saving || status == "alert",
-          onclick: -> { update_station(station, "raise_alert") }
-        ) { "Alert" }
-        button(
-          class: "button compact",
-          disabled: state.is_saving || status == "normal",
-          onclick: -> { update_station(station, "clear_alert") }
-        ) { "Clear" }
+        station_button(station, "raise_alert", "Alert", status == "alert")
+        station_button(station, "clear_alert", "Clear", status == "normal")
+        station_button(station, "mark_crowded", "Crowd", status == "crowded")
+        station_button(station, "close", "Close", status == "closed")
+        station_button(station, "reopen", "Open", status == "normal")
       end
     end
+  end
+
+  def station_button(station, action, label_text, inactive)
+    station_id = object_id(station)
+    confirm = state.pending_station_id.to_i == station_id && state.pending_action == action
+    button(
+      class: "button compact #{confirm ? "primary" : "secondary"}",
+      disabled: props[:disabled] || state.is_saving || inactive,
+      onclick: -> {
+        if confirm
+          update_station(station, action)
+        else
+          patch(pending_station_id: station_id, pending_action: action, notice: nil, error: nil)
+        end
+      }
+    ) { confirm ? "Confirm" : label_text }
   end
 
   def update_station(station, action)
     line_id = props[:line_id]
     station_id = object_id(station)
     return unless line_id && station_id > 0
+    unless reason_valid_for?(action)
+      patch(error: "Reason is required", notice: nil)
+      return
+    end
 
-    patch(is_saving: true, notice: nil, error: nil)
+    patch(is_saving: true, notice: nil, error: nil, pending_station_id: nil, pending_action: nil)
     url = "/api/lines/#{line_id}/stations/#{station_id}/#{action}"
     Funicular::HTTP.post(url, { reason: state.reason }) do |response|
       if response.ok
@@ -67,5 +83,11 @@ class StationPanelComponent < ApplicationComponent
         patch(is_saving: false, notice: nil, error: response.error_message.to_s)
       end
     end
+  end
+
+  def reason_valid_for?(action)
+    return true unless %w[raise_alert close].include?(action)
+
+    state.reason.to_s.strip.length > 0
   end
 end

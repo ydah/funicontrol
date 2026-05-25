@@ -22,6 +22,13 @@ class SettingsComponent < ApplicationComponent
           field_group("Density") do
             f.select(:density, [[ "comfortable", "Comfortable" ], [ "compact", "Compact" ]], class: "input")
           end
+          field_group("Operator") do
+            f.text_field(:operator_name, class: "input")
+          end
+          div(class: "field inline") do
+            f.checkbox(:score_mode)
+            label { "Score mode" }
+          end
           div(class: "field inline") do
             f.checkbox(:sound_enabled)
             label { "Sound enabled" }
@@ -30,7 +37,7 @@ class SettingsComponent < ApplicationComponent
         end
         p(class: "notice") { "Saved locally" } if state.saved
         div(class: "row") do
-          button(class: "button secondary", onclick: :clear_local_data) { "Clear local data" }
+          button(class: "button secondary", onclick: :clear_local_data) { "Reset local state" }
         end
       end
     end
@@ -62,6 +69,8 @@ class SettingsComponent < ApplicationComponent
     {
       theme: "dark",
       density: "comfortable",
+      operator_name: "operator",
+      score_mode: false,
       sound_enabled: true
     }
   end

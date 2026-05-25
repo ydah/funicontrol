@@ -20,5 +20,22 @@ window.FunicontrolUpload = window.FunicontrolUpload || {
       const data = await response.json();
       return { ok: response.ok, status: response.status, data };
     });
+  },
+
+  submitWithEvent(method, url, fields, fileField, fileGlobalKey, eventName) {
+    return this.submit(method, url, fields, fileField, fileGlobalKey)
+      .then((result) => {
+        window.dispatchEvent(new CustomEvent(eventName, { detail: result }));
+        return result;
+      })
+      .catch((error) => {
+        const result = {
+          ok: false,
+          status: 0,
+          data: { errors: { base: [String(error)] } }
+        };
+        window.dispatchEvent(new CustomEvent(eventName, { detail: result }));
+        return result;
+      });
   }
 };

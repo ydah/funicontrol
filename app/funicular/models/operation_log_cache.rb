@@ -4,6 +4,6 @@ class OperationLogCache < Funicular::Store::Collection
   limit 300
   order :prepend
   key ->(event) { event["id"] }
-  expires_in 600
+  expires_in 1_800
   cleared_on :logout
 end

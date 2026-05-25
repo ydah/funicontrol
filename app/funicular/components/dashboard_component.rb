@@ -7,7 +7,7 @@ class DashboardComponent < ApplicationComponent
     },
     on_resolve: ->(lines) {
       patch(is_loading: false, lines: lines)
-      if lines && !lines.empty?
+      if lines && !lines.empty? && !SelectedLineStore.where.value
         SelectedLineStore.where.value = value(lines.first, :id)
       end
     }
@@ -26,13 +26,17 @@ class DashboardComponent < ApplicationComponent
           summary_card("Lines", state.lines.length.to_s)
           summary_card("Running Cars", total_running_cars.to_s)
           summary_card("Open Incidents", total_open_incidents.to_s)
+          summary_card("Critical", total_critical_incidents.to_s)
         end
         div(class: "line-list") do
           state.lines.each do |line|
             div(class: "line-row") do
               div do
-                h3 { value(line, :name).to_s }
-                p(class: "muted") { value(line, :description).to_s }
+                div(class: "row") do
+                  h3 { value(line, :name).to_s }
+                  span(class: "status-chip line-status-#{value(line, :status)}") { value(line, :status).to_s }
+                end
+                p(class: "muted") { "#{value(line, :description)} / #{value(line, :weather_condition)} / score #{value(line, :passenger_satisfaction_score)}" }
               end
               link_to "/lines/#{value(line, :id)}", navigate: true, class: "button primary" do
                 span { "Open line" }
@@ -57,5 +61,9 @@ class DashboardComponent < ApplicationComponent
 
   def total_open_incidents
     state.lines.map { |line| value(line, :open_incidents_count).to_i }.reduce(0) { |sum, count| sum + count }
+  end
+
+  def total_critical_incidents
+    state.lines.map { |line| value(line, :critical_incidents_count).to_i }.reduce(0) { |sum, count| sum + count }
   end
 end

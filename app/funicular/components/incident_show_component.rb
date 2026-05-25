@@ -7,7 +7,8 @@ class IncidentShowComponent < ApplicationComponent
     },
     on_resolve: ->(incident) {
       comments = value(incident, :incident_comments) || []
-      patch(is_loading: false, incident: incident, comments: comments)
+      operator_name = value(OperatorPrefsStore.where.value || {}, :operator_name) || "operator"
+      patch(is_loading: false, incident: incident, comments: comments, comment: { author_name: operator_name, body: "" })
       subscribe_line_channel(value(incident, :line_id))
     }
 
@@ -43,11 +44,22 @@ class IncidentShowComponent < ApplicationComponent
               span(class: "status-chip") { value(incident, :status).to_s }
             end
             p(class: "muted") { "#{value(incident, :kind)} / #{severity_label(value(incident, :severity))}" }
+            p(class: "muted") { "SLA #{value(incident, :sla_status)} / open #{value(incident, :open_seconds)}s" }
             p { value(incident, :description).to_s }
-            if value(incident, :photo_url)
-              img(src: value(incident, :photo_url).to_s, class: "incident-photo")
+            attachments = value(incident, :attachments) || []
+            attachments.each do |attachment|
+              if value(attachment, :content_type).to_s.start_with?("image/")
+                img(src: value(attachment, :url).to_s, class: "incident-photo")
+              else
+                link_to value(attachment, :url).to_s, class: "button secondary" do
+                  span { value(attachment, :filename).to_s }
+                end
+              end
             end
-            button(class: "button primary", onclick: :resolve_incident, disabled: value(incident, :status) == "resolved") { "Resolve" }
+            div(class: "row") do
+              button(class: "button secondary", onclick: :acknowledge_incident, disabled: value(incident, :status) != "open") { "Acknowledge" }
+              button(class: "button primary", onclick: :resolve_incident, disabled: value(incident, :status) == "resolved") { "Resolve" }
+            end
           end
           div(class: "panel") do
             h3 { "Comments" }
@@ -57,6 +69,10 @@ class IncidentShowComponent < ApplicationComponent
               field_group("Comment") { f.textarea(:body, class: "input textarea", rows: 3) }
               f.submit(state.is_saving ? "Posting..." : "Post comment", class: "button primary", disabled: state.is_saving)
             end
+          end
+          div(class: "panel") do
+            h3 { "Related Events" }
+            component(OperationLogComponent, events: value(incident, :related_events) || [], scroll_key: "incident-#{props[:id]}", event_limit: 30)
           end
         end
         end
@@ -86,6 +102,17 @@ class IncidentShowComponent < ApplicationComponent
 
   def resolve_incident
     Funicular::HTTP.post("/api/incidents/#{props[:id]}/resolve") do |response|
+      if response.ok
+        Funicular::HTTP.expire_cache("/api/incidents")
+        Funicular::HTTP.expire_cache("/api/incidents/#{props[:id]}")
+        Funicular::HTTP.expire_cache("/api/lines/#{value(state.incident, :line_id)}/incidents")
+        patch(incident: Incident.new(response.data))
+      end
+    end
+  end
+
+  def acknowledge_incident
+    Funicular::HTTP.post("/api/incidents/#{props[:id]}/acknowledge") do |response|
       if response.ok
         Funicular::HTTP.expire_cache("/api/incidents")
         Funicular::HTTP.expire_cache("/api/incidents/#{props[:id]}")
