@@ -10,11 +10,14 @@ trap("TERM") { puts "\nStopping simulation"; exit }
 puts "Starting Funicontrol simulation..."
 
 tick = 0
+tick_interval = ENV.fetch("SIM_TICK_INTERVAL", "1").to_f
+random_events_enabled = ENV["SIM_RANDOM_EVENTS"] == "1"
 loop do
   Rails.application.executor.wrap do
     ActiveRecord::Base.connection.clear_query_cache
     Line.find_each do |line|
       AdvanceCarPositions.call(line:)
+      RandomSimulationEvents.call(line:) if random_events_enabled
     end
   end
   tick += 1
@@ -22,5 +25,5 @@ loop do
     summary = Car.order(:code).map { |car| "#{car.code}=#{car.position.to_f.round(3)} #{car.direction} #{car.status}" }.join(" | ")
     puts "Simulation tick #{tick}: #{summary}"
   end
-  sleep 1
+  sleep tick_interval
 end

@@ -14,6 +14,18 @@ module Api
         update_status("clear_alert")
       end
 
+      def mark_crowded
+        update_status("mark_crowded")
+      end
+
+      def close
+        update_status("close")
+      end
+
+      def reopen
+        update_status("reopen")
+      end
+
       private
 
       def update_status(action)

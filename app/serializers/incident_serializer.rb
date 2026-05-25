@@ -12,6 +12,9 @@ class IncidentSerializer < ApplicationSerializer
       description: record.description,
       photo_url: photo_url,
       photo_filename: photo_filename,
+      attachments: attachments,
+      open_seconds: record.open_seconds,
+      sla_status: record.sla_status,
       resolved_at: timestamp(record.resolved_at),
       created_at: timestamp(record.created_at),
       updated_at: timestamp(record.updated_at)
@@ -21,18 +24,49 @@ class IncidentSerializer < ApplicationSerializer
       if options[:include_comments]
         json[:incident_comments] = IncidentCommentSerializer.render_collection(record.incident_comments.order(:created_at, :id))
       end
+      if options[:include_events]
+        json[:related_events] = OperationEventSerializer.render_collection(record.operation_events.reverse_chronological.limit(30))
+      end
     end
   end
 
   private
 
   def photo_url
-    return nil unless record.photo.attached?
+    first_attachment = primary_attachment
+    return nil unless first_attachment
 
-    Rails.application.routes.url_helpers.rails_blob_path(record.photo, only_path: true)
+    Rails.application.routes.url_helpers.rails_blob_path(first_attachment, only_path: true)
   end
 
   def photo_filename
-    record.photo.attached? ? record.photo.filename.to_s : nil
+    primary_attachment&.filename&.to_s
+  end
+
+  def attachments
+    active_attachments.map do |attachment|
+      blob = attachment.blob
+      {
+        id: attachment.id,
+        filename: blob.filename.to_s,
+        content_type: blob.content_type,
+        byte_size: blob.byte_size,
+        url: Rails.application.routes.url_helpers.rails_blob_path(blob, only_path: true)
+      }
+    end
+  end
+
+  def primary_attachment
+    return record.attachments.first if record.attachments.attached?
+    return record.photo if record.photo.attached?
+
+    nil
+  end
+
+  def active_attachments
+    return record.attachments.attachments if record.attachments.attached?
+    return record.photo.attachments if record.photo.attached?
+
+    []
   end
 end

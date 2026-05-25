@@ -19,9 +19,18 @@ class DispatchCarTest < ActiveSupport::TestCase
     car = create_funicontrol_line.cars.first
 
     assert_equal "slow", DispatchCar.call(car:, action: "slow").car.status
-    assert_equal "emergency", DispatchCar.call(car:, action: "emergency_stop").car.status
+    assert_equal "emergency", DispatchCar.call(car:, action: "emergency_stop", reason: "test").car.status
+    assert_equal "inspection_required", DispatchCar.call(car:, action: "recover").car.status
     assert_equal "stopped", DispatchCar.call(car:, action: "recover").car.status
     assert_equal "stopped", DispatchCar.call(car:, action: "stop").car.status
+  end
+
+  test "emergency stop requires a reason" do
+    car = create_funicontrol_line.cars.first
+
+    assert_raises(ArgumentError) do
+      DispatchCar.call(car:, action: "emergency_stop")
+    end
   end
 
   test "unknown action raises argument error" do

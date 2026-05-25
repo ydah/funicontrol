@@ -8,7 +8,7 @@ class AdvanceCarPositionsTest < ActiveSupport::TestCase
     car = line.cars.first
 
     assert_difference "OperationEvent.count", 2 do
-      assert_broadcasts("line_#{line.id}", 2) do
+      assert_broadcasts("line_#{line.id}", 1) do
         AdvanceCarPositions.call(line:)
       end
     end
@@ -26,7 +26,7 @@ class AdvanceCarPositionsTest < ActiveSupport::TestCase
     end
   end
 
-  test "cars reverse direction at route edges" do
+  test "cars dwell at route edges before reversing direction" do
     line = create_funicontrol_line
     car = line.cars.first
     car.update!(position: 0.99, direction: "up", speed: 0.02, status: "running")
@@ -34,6 +34,8 @@ class AdvanceCarPositionsTest < ActiveSupport::TestCase
     AdvanceCarPositions.call(line:)
 
     assert_equal 1.0, car.reload.position.to_f
-    assert_equal "down", car.direction
+    assert_equal "idle", car.direction
+    assert_equal "stopped", car.status
+    assert car.dwell_until.present?
   end
 end

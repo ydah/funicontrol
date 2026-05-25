@@ -23,16 +23,16 @@ class LineChannelTest < ActionCable::Channel::TestCase
     assert_equal "car_stopped", line.operation_events.order(:id).last.event_type
   end
 
-  test "dispatch recovers from stale car id inside the subscribed line" do
+  test "dispatch rejects stale car id inside the subscribed line" do
     line = create_funicontrol_line
     subscribe line_id: line.id
 
-    assert_broadcasts("line_#{line.id}", 1) do
-      perform :dispatch, car_id: 45, command: "start", reason: "stale channel id"
+    assert_no_difference "OperationEvent.count" do
+      assert_no_broadcasts("line_#{line.id}") do
+        perform :dispatch, car_id: 45, command: "start", reason: "stale channel id"
+      end
     end
 
-    event = line.operation_events.order(:id).last
-    assert_equal "car_started", event.event_type
-    assert_equal line.cars.order(:code).first.id, event.car_id
+    assert_equal "running", line.cars.order(:code).first.reload.status
   end
 end

@@ -15,6 +15,7 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     body = response.parsed_body
     assert_equal 3, body["stations"].length
     assert_equal 2, body["cars"].length
+    assert_includes body.keys, "track_segments"
 
     get "/api/lines/#{line.id}/stations"
     assert_response :success
@@ -48,56 +49,19 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     assert_equal "car_started", response.parsed_body["event"]["event_type"]
   end
 
-  test "dispatch endpoint recovers from stale client car id when line context is available" do
-    line = create_funicontrol_line
-    car = line.cars.second
-
-    post "/api/cars/999999/dispatch",
-      params: { action: "stop", line_id: line.id, code: car.code },
-      as: :json
-
-    assert_response :success
-    assert_equal car.id, response.parsed_body["car"]["id"]
-    assert_equal "stopped", response.parsed_body["car"]["status"]
-  end
-
-  test "dispatch endpoint recovers from stale client car id using line referer" do
+  test "dispatch endpoint does not infer a stale or missing car target" do
     line = create_funicontrol_line
 
     post "/api/cars/999999/dispatch",
-      params: { action: "slow" },
-      headers: { "HTTP_REFERER" => "http://www.example.com/lines/#{line.id}" },
+      params: { action: "stop", line_id: line.id, code: "car_a" },
       as: :json
+    assert_response :not_found
 
-    assert_response :success
-    assert_equal line.cars.order(:code).first.id, response.parsed_body["car"]["id"]
-    assert_equal "slow", response.parsed_body["car"]["status"]
-  end
-
-  test "dispatch endpoint prefers current line referer over stale payload line id" do
-    current_line = create_funicontrol_line
-    stale_line = create_funicontrol_line
-    car = current_line.cars.find_by!(code: "car_a")
-
-    post "/api/cars/45/dispatch",
-      params: { action: "start", line_id: stale_line.id, code: car.code },
-      headers: { "HTTP_REFERER" => "http://www.example.com/lines/#{current_line.id}" },
+    post "/api/lines/#{line.id}/dispatch",
+      params: { action: "start" },
       as: :json
-
-    assert_response :success
-    assert_equal car.id, response.parsed_body["car"]["id"]
-    assert_equal current_line.id, response.parsed_body["car"]["line_id"]
-  end
-
-  test "dispatch endpoint falls back to the available line when stale payload has no referer" do
-    line = create_funicontrol_line
-
-    post "/api/cars/45/dispatch",
-      params: { action: "start", line_id: 57, code: "car_a" },
-      as: :json
-
-    assert_response :success
-    assert_equal line.cars.find_by!(code: "car_a").id, response.parsed_body["car"]["id"]
+    assert_response :bad_request
+    assert response.parsed_body["errors"]["base"].first.include?("car_id or code")
   end
 
   test "line suspend and resume endpoints update status and record events" do
@@ -117,6 +81,18 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "normal", response.parsed_body["line"]["status"]
     assert_equal "line_resumed", response.parsed_body["event"]["event_type"]
+
+    assert_broadcasts("line_#{line.id}", 1) do
+      post "/api/lines/#{line.id}/enter_maintenance", params: { reason: "inspection" }, as: :json
+    end
+    assert_response :success
+    assert_equal "maintenance", response.parsed_body["line"]["status"]
+
+    assert_broadcasts("line_#{line.id}", 1) do
+      post "/api/lines/#{line.id}/exit_maintenance", params: { reason: "done" }, as: :json
+    end
+    assert_response :success
+    assert_equal "normal", response.parsed_body["line"]["status"]
   end
 
   test "station alert endpoints update station and record events" do
@@ -141,6 +117,24 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "normal", response.parsed_body["station"]["status"]
     assert_equal "station_alert_cleared", response.parsed_body["event"]["event_type"]
+
+    post "/api/lines/#{line.id}/stations/#{station.id}/mark_crowded",
+      params: { reason: "platform" },
+      as: :json
+    assert_response :success
+    assert_equal "crowded", response.parsed_body["station"]["status"]
+
+    post "/api/lines/#{line.id}/stations/#{station.id}/close",
+      params: { reason: "inspection" },
+      as: :json
+    assert_response :success
+    assert_equal "closed", response.parsed_body["station"]["status"]
+
+    post "/api/lines/#{line.id}/stations/#{station.id}/reopen",
+      params: { reason: "clear" },
+      as: :json
+    assert_response :success
+    assert_equal "normal", response.parsed_body["station"]["status"]
   end
 
   test "incident lifecycle and comments work through json api" do
@@ -160,7 +154,7 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "Track noise", response.parsed_body["title"]
 
-    patch "/api/incidents/#{incident_id}", params: { status: "acknowledged" }, as: :json
+    post "/api/incidents/#{incident_id}/acknowledge"
     assert_response :success
     assert_equal "acknowledged", response.parsed_body["status"]
 
@@ -196,7 +190,9 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     body = response.parsed_body
     assert_equal "incident_photo.txt", body["photo_filename"]
     assert body["photo_url"].present?
-    assert Incident.find(body["id"]).photo.attached?
+    incident = Incident.find(body["id"])
+    assert incident.attachments.attached?
+    assert_equal "incident_photo.txt", incident.attachments.first.filename.to_s
   end
 
   test "operation events support line log query and schemas are available" do
@@ -213,6 +209,13 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [ newer_event.id ], response.parsed_body.map { |event| event["id"] }
 
+    get "/api/lines/#{line.id}/operation_events?order=asc"
+    assert_response :success
+    assert_equal [ older_event.id, newer_event.id ], response.parsed_body.map { |event| event["id"] }.last(2)
+
+    get "/api/lines/#{line.id}/operation_events?since=not-a-time"
+    assert_response :bad_request
+
     get "/api/lines/#{line.id}"
     assert_response :success
     assert_nil response.parsed_body["recent_events"]
@@ -220,6 +223,35 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     get "/api/schema/line"
     assert_response :success
     assert_includes response.parsed_body["attributes"].keys, "name"
+  end
+
+  test "weather reports and scenario import endpoints work" do
+    line = create_funicontrol_line
+
+    post "/api/lines/#{line.id}/weather", params: { weather_condition: "fog", reason: "visibility" }, as: :json
+    assert_response :success
+    assert_equal "fog", response.parsed_body["line"]["weather_condition"]
+    assert_equal "line_weather_changed", response.parsed_body["event"]["event_type"]
+
+    get "/api/reports/daily", params: { line_id: line.id, date: Date.current.iso8601 }
+    assert_response :success
+    assert_equal line.id, response.parsed_body["line_id"]
+    assert response.parsed_body["payload"]["event_counts"].present?
+
+    post "/api/scenarios/import",
+      params: {
+        line_id: line.id,
+        events: [
+          {
+            event_type: "operator_message_sent",
+            payload: { message: "Replay note" },
+            occurred_at: Time.current.iso8601
+          }
+        ]
+      },
+      as: :json
+    assert_response :created
+    assert_equal 1, response.parsed_body["imported_count"]
   end
 
   test "validation errors use the unified errors object" do

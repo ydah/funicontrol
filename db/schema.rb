@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_18_084713) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_25_000100) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -43,15 +43,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_084713) do
     t.string "code", null: false
     t.datetime "created_at", null: false
     t.string "direction", default: "idle", null: false
+    t.datetime "dwell_until"
     t.datetime "last_seen_at"
     t.integer "line_id", null: false
     t.string "name", null: false
+    t.string "operation_mode", default: "auto", null: false
     t.decimal "position", precision: 6, scale: 4, null: false
     t.decimal "speed", precision: 6, scale: 4, default: "0.0", null: false
     t.string "status", default: "idle", null: false
     t.datetime "updated_at", null: false
     t.index ["line_id", "code"], name: "index_cars_on_line_id_and_code", unique: true
     t.index ["line_id"], name: "index_cars_on_line_id"
+  end
+
+  create_table "daily_reports", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "line_id", null: false
+    t.json "payload", default: {}, null: false
+    t.date "report_date", null: false
+    t.datetime "updated_at", null: false
+    t.index ["line_id", "report_date"], name: "index_daily_reports_on_line_id_and_report_date", unique: true
+    t.index ["line_id"], name: "index_daily_reports_on_line_id"
   end
 
   create_table "incident_comments", force: :cascade do |t|
@@ -86,9 +98,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_084713) do
     t.datetime "created_at", null: false
     t.text "description"
     t.string "name", null: false
+    t.integer "passenger_satisfaction_score", default: 100, null: false
     t.string "slug", null: false
     t.string "status", default: "normal", null: false
     t.datetime "updated_at", null: false
+    t.string "weather_condition", default: "clear", null: false
     t.index ["slug"], name: "index_lines_on_slug", unique: true
   end
 
@@ -123,9 +137,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_084713) do
     t.index ["line_id"], name: "index_stations_on_line_id"
   end
 
+  create_table "track_segments", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.decimal "end_position", precision: 6, scale: 4, null: false
+    t.decimal "gradient", precision: 6, scale: 3
+    t.string "kind", default: "speed_limit", null: false
+    t.integer "line_id", null: false
+    t.string "name", null: false
+    t.decimal "speed_limit", precision: 6, scale: 4
+    t.decimal "start_position", precision: 6, scale: 4, null: false
+    t.datetime "updated_at", null: false
+    t.index ["line_id", "kind"], name: "index_track_segments_on_line_id_and_kind"
+    t.index ["line_id", "start_position", "end_position"], name: "idx_on_line_id_start_position_end_position_412f46e335"
+    t.index ["line_id"], name: "index_track_segments_on_line_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "cars", "lines"
+  add_foreign_key "daily_reports", "lines"
   add_foreign_key "incident_comments", "incidents"
   add_foreign_key "incidents", "cars"
   add_foreign_key "incidents", "lines"
@@ -135,4 +165,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_084713) do
   add_foreign_key "operation_events", "lines"
   add_foreign_key "operation_events", "stations"
   add_foreign_key "stations", "lines"
+  add_foreign_key "track_segments", "lines"
 end

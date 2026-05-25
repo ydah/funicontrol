@@ -5,19 +5,33 @@ class LineSerializer < ApplicationSerializer
       name: record.name,
       slug: record.slug,
       status: record.status,
+      weather_condition: record.weather_condition,
+      passenger_satisfaction_score: record.passenger_satisfaction_score,
       description: record.description,
       created_at: timestamp(record.created_at),
       updated_at: timestamp(record.updated_at)
     }.tap do |json|
       json[:stations] = StationSerializer.render_collection(record.stations) if options[:include_stations]
       json[:cars] = CarSerializer.render_collection(record.cars) if options[:include_cars]
-      json[:open_incidents_count] = record.incidents.where.not(status: "resolved").count if options[:include_counts]
-      json[:running_cars_count] = record.cars.where(status: %w[running slow]).count if options[:include_counts]
+      json[:track_segments] = TrackSegmentSerializer.render_collection(record.track_segments) if options[:include_track_segments]
+      if options[:include_counts]
+        json[:open_incidents_count] = option_count(:open_incidents_counts) { record.incidents.where.not(status: "resolved").count }
+        json[:running_cars_count] = option_count(:running_cars_counts) { record.cars.where(status: %w[running slow]).count }
+        json[:critical_incidents_count] = option_count(:critical_incidents_counts) { record.open_critical_incidents_count }
+      end
       if options[:include_recent_events]
-        json[:recent_events] = OperationEventSerializer.render_collection(
-          record.operation_events.order(occurred_at: :desc, id: :desc).limit(10)
-        )
+        events = options.fetch(:recent_events_by_line, {})[record.id] || record.operation_events.important.reverse_chronological.limit(10)
+        json[:recent_events] = OperationEventSerializer.render_collection(events.first(10))
       end
     end
+  end
+
+  private
+
+  def option_count(key)
+    counts = options[key]
+    return counts.fetch(record.id, 0) if counts
+
+    yield
   end
 end
