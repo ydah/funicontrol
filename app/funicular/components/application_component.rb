@@ -145,8 +145,6 @@ class ApplicationComponent < Funicular::Component
   end
 
   def upload_form(method, url, fields, file_field: nil, file_global_key: nil, &block)
-    result_key = "_funicontrolUploadResult_#{Time.now.to_i}_#{rand(100_000)}"
-    event_name = "#{result_key}_event"
     safe_fields = {}
     fields.each do |key, field_value|
       next if key.to_s == "photo"
@@ -155,36 +153,15 @@ class ApplicationComponent < Funicular::Component
       safe_fields[key.to_s] = field_value
     end
 
-    script = JS.document.createElement("script")
-    script[:textContent] = <<~JAVASCRIPT
-      window.addEventListener(#{JSON.generate(event_name)}, function handler(event) {
-        window.removeEventListener(#{JSON.generate(event_name)}, handler);
-        window[#{JSON.generate(result_key)}] = JSON.stringify(event.detail);
-      });
-      window.FunicontrolUpload.submitWithEvent(
-        #{JSON.generate(method.to_s.upcase)},
-        #{JSON.generate(url)},
-        #{JSON.generate(safe_fields)},
-        #{JSON.generate(file_field)},
-        #{JSON.generate(file_global_key)},
-        #{JSON.generate(event_name)}
-      );
-    JAVASCRIPT
-    JS.document.body.appendChild(script)
-    JS.document.body.removeChild(script)
-
-    counter = 0
-    raw_result = nil
-    while counter < 200
-      raw_result = JS.global[result_key.to_sym]
-      break if raw_result && !raw_result.to_s.empty?
-      counter += 1
-      sleep 0.05
+    JS.global[:FunicontrolUpload].submitSerialized(
+      method.to_s.upcase,
+      url,
+      JS::Bridge.to_js(safe_fields),
+      file_field,
+      file_global_key
+    ) do |raw_result|
+      block&.call(JSON.parse(raw_result.to_s))
     end
-    JS.global[result_key.to_sym] = nil
-
-    result = raw_result ? JSON.parse(raw_result.to_s) : {"ok" => false, "data" => {"errors" => {"base" => ["Upload timed out"]}}}
-    block&.call(result)
   end
 
   def serialize_collection(items)

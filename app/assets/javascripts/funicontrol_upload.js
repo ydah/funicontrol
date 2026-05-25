@@ -37,5 +37,15 @@ window.FunicontrolUpload = window.FunicontrolUpload || {
         window.dispatchEvent(new CustomEvent(eventName, { detail: result }));
         return result;
       });
+  },
+
+  submitSerialized(method, url, fields, fileField, fileGlobalKey) {
+    return this.submit(method, url, fields, fileField, fileGlobalKey)
+      .catch((error) => ({
+        ok: false,
+        status: 0,
+        data: { errors: { base: [String(error)] } }
+      }))
+      .then((result) => JSON.stringify(result));
   }
 };

@@ -1,4 +1,9 @@
 class LineMapComponent < ApplicationComponent
+  MAP_WIDTH = 900.0
+  MAP_HEIGHT = 260.0
+  MAP_MARGIN_X = 56.0
+  MAP_MARGIN_Y = 54.0
+
   styles do
     map "line-map"
     station "station-marker"
@@ -66,8 +71,8 @@ class LineMapComponent < ApplicationComponent
 
   def map_payload
     {
-      stations: serialize_collection(props[:stations] || []),
-      cars: serialize_collection(props[:cars] || []),
+      stations: serialize_map_collection(props[:stations] || []),
+      cars: serialize_map_collection(props[:cars] || []),
       track_segments: serialize_track_segments(props[:track_segments] || [])
     }
   end
@@ -80,10 +85,8 @@ class LineMapComponent < ApplicationComponent
   end
 
   def map_point_style(item)
-    position = percent_position(item)
-    x = 6.2 + position * 0.876
-    y = 79.2 - position * 0.584
-    "left: #{x.round(1)}%; top: #{y.round(1)}%;"
+    point = map_coordinates_for_position(numeric_value(value(item, :position)))
+    "left: #{point[:map_x_percent].round(1)}%; top: #{point[:map_y_percent].round(1)}%;"
   end
 
   def select_car(car)
@@ -102,21 +105,52 @@ class LineMapComponent < ApplicationComponent
     start_position = numeric_value(value(segment, :start_position))
     end_position = numeric_value(value(segment, :end_position))
     middle = (start_position + end_position) / 2.0
-    x = 6.2 + (middle * 100) * 0.876
-    y = 79.2 - (middle * 100) * 0.584
-    "left: #{x.round(1)}%; top: #{y.round(1)}%;"
+    point = map_coordinates_for_position(middle)
+    "left: #{point[:map_x_percent].round(1)}%; top: #{point[:map_y_percent].round(1)}%;"
+  end
+
+  def serialize_map_collection(items)
+    (items || []).map do |item|
+      position = numeric_value(value(item, :position))
+      {
+        id: object_id(item),
+        name: value(item, :name),
+        position: position,
+        direction: value(item, :direction),
+        speed: numeric_value(value(item, :speed)),
+        status: value(item, :status)
+      }.merge(map_coordinates_for_position(position))
+    end
   end
 
   def serialize_track_segments(items)
     (items || []).map do |segment|
+      start_position = numeric_value(value(segment, :start_position))
+      end_position = numeric_value(value(segment, :end_position))
+      start_point = map_coordinates_for_position(start_position)
+      end_point = map_coordinates_for_position(end_position)
       {
         id: object_id(segment),
         name: value(segment, :name),
         kind: value(segment, :kind),
-        start_position: numeric_value(value(segment, :start_position)),
-        end_position: numeric_value(value(segment, :end_position)),
+        start_position: start_position,
+        end_position: end_position,
+        start_map_x_percent: start_point[:map_x_percent],
+        start_map_y_percent: start_point[:map_y_percent],
+        end_map_x_percent: end_point[:map_x_percent],
+        end_map_y_percent: end_point[:map_y_percent],
         speed_limit: numeric_value(value(segment, :speed_limit))
       }
     end
+  end
+
+  def map_coordinates_for_position(position)
+    clamped = position.to_f.clamp(0.0, 1.0)
+    x = MAP_MARGIN_X + (MAP_WIDTH - MAP_MARGIN_X * 2) * clamped
+    y = MAP_HEIGHT - MAP_MARGIN_Y - (MAP_HEIGHT - MAP_MARGIN_Y * 2) * clamped
+    {
+      map_x_percent: (x / MAP_WIDTH * 100).round(3),
+      map_y_percent: (y / MAP_HEIGHT * 100).round(3)
+    }
   end
 end

@@ -243,6 +243,39 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     assert_not body["thumbnail_url"].include?("://")
   end
 
+  test "incident update can replace existing attachments" do
+    line = create_funicontrol_line
+    first_photo = fixture_file_upload("incident_photo.txt", "text/plain")
+    replacement = Tempfile.new(["replacement-incident", ".txt"])
+    replacement.write("replacement")
+    replacement.rewind
+
+    post "/api/lines/#{line.id}/incidents",
+      params: {
+        kind: "inspection",
+        title: "Original attachment",
+        photo: first_photo
+      }
+    assert_response :created
+    incident = Incident.find(response.parsed_body["id"])
+    assert_equal ["incident_photo.txt"], incident.attachments.map { |attachment| attachment.filename.to_s }
+
+    patch "/api/incidents/#{incident.id}",
+      params: {
+        title: "Replacement attachment",
+        replace_attachments: true,
+        photo: Rack::Test::UploadedFile.new(replacement.path, "text/plain")
+      }
+
+    assert_response :success
+    incident.reload
+    assert_equal 1, incident.attachments.count
+    assert_equal File.basename(replacement.path), incident.attachments.first.filename.to_s
+  ensure
+    replacement&.close
+    replacement&.unlink
+  end
+
   test "incident attachments reject oversized uploads" do
     line = create_funicontrol_line
     file = Tempfile.new(["large-incident", ".txt"])

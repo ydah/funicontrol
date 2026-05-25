@@ -46,8 +46,8 @@ class LineMapRenderer {
 
     trackSegments.forEach((segment) => {
       if (segment.kind !== "passing_loop") return;
-      const start = this.pointFor(segment.start_position, width, height);
-      const end = this.pointFor(segment.end_position, width, height);
+      const start = this.segmentPointFor(segment, "start", width, height);
+      const end = this.segmentPointFor(segment, "end", width, height);
       ctx.strokeStyle = "#4bb6b7";
       ctx.lineWidth = 9;
       ctx.globalAlpha = 0.7;
@@ -59,7 +59,7 @@ class LineMapRenderer {
     });
 
     stations.forEach((station) => {
-      const point = this.pointFor(station.position, width, height);
+      const point = this.pointFor(station, width, height);
       ctx.fillStyle = "#151b1f";
       ctx.strokeStyle = this.stationColorFor(station.status);
       ctx.lineWidth = 3;
@@ -74,7 +74,7 @@ class LineMapRenderer {
     });
 
     cars.forEach((car) => {
-      const point = this.pointFor(car.position, width, height);
+      const point = this.pointFor(car, width, height);
       const color = this.colorFor(car.status);
       ctx.fillStyle = color;
       ctx.strokeStyle = "#101316";
@@ -104,11 +104,38 @@ class LineMapRenderer {
     return { width: rect.width, height: rect.height };
   }
 
-  pointFor(position, width, height) {
+  pointFor(item, width, height) {
+    if (item && typeof item === "object") {
+      const point = this.percentPointFor(item.map_x_percent, item.map_y_percent, width, height);
+      if (point) return point;
+    }
+
+    const position = item && typeof item === "object" ? item.position : item;
     const clamped = Math.max(0, Math.min(1, Number(position) || 0));
     const x = 56 + (width - 112) * clamped;
     const y = height - 54 - (height - 108) * clamped;
     return { x, y };
+  }
+
+  segmentPointFor(segment, prefix, width, height) {
+    const point = this.percentPointFor(
+      segment[`${prefix}_map_x_percent`],
+      segment[`${prefix}_map_y_percent`],
+      width,
+      height
+    );
+    return point || this.pointFor(segment[`${prefix}_position`], width, height);
+  }
+
+  percentPointFor(xPercent, yPercent, width, height) {
+    const x = Number(xPercent);
+    const y = Number(yPercent);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+
+    return {
+      x: width * x / 100,
+      y: height * y / 100
+    };
   }
 
   colorFor(status) {

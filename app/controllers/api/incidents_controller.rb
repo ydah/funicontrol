@@ -28,10 +28,9 @@ module Api
 
     def update
       incident = Incident.find(params[:id])
-      attach_files(incident)
       ensure_incident_can_change!(incident)
 
-      if incident.update(incident_params)
+      if update_incident(incident)
         event = create_event(incident:, event_type: "incident_updated")
         create_notification_event(incident) if incident.severity == "critical"
         LineBroadcaster.broadcast_incident_updated(line: incident.line, incident:, event:)
@@ -89,6 +88,23 @@ module Api
       upload_params.each do |upload|
         incident.attachments.attach(upload)
       end
+    end
+
+    def update_incident(incident)
+      updated = false
+
+      Incident.transaction do
+        incident.attachments.detach if replace_attachments?
+        attach_files(incident)
+        updated = incident.update(incident_params)
+        raise ActiveRecord::Rollback unless updated
+      end
+
+      updated
+    end
+
+    def replace_attachments?
+      ActiveModel::Type::Boolean.new.cast(params[:replace_attachments])
     end
 
     def upload_params
