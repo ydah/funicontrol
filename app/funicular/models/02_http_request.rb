@@ -1,10 +1,14 @@
 module Funicular
   module HTTP
     class << self
+      def delete(url, body = nil, &block)
+        request("DELETE", url, body, &block)
+      end
+
       private
 
       def request(method, url, body, &block)
-        options = { method: method, credentials: "include" }
+        options = {method: method, credentials: "include"}
         headers = {}
 
         if body
@@ -24,7 +28,7 @@ module Funicular
           json_text = response.to_binary.to_s
           data = json_text.empty? ? nil : Funicular::JSONTransport.parse(json_text)
           http_response = Response.new(status, data)
-          block.call(http_response) if block
+          block&.call(http_response)
         end
       end
     end

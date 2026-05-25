@@ -2,11 +2,11 @@ class SetStationStatus
   Result = Data.define(:station, :event)
 
   ACTIONS = {
-    "raise_alert" => [ "alert", "station_alert_raised" ],
-    "clear_alert" => [ "normal", "station_alert_cleared" ],
-    "mark_crowded" => [ "crowded", "station_crowded" ],
-    "close" => [ "closed", "station_closed" ],
-    "reopen" => [ "normal", "station_reopened" ]
+    "raise_alert" => ["alert", "station_alert_raised"],
+    "clear_alert" => ["normal", "station_alert_cleared"],
+    "mark_crowded" => ["crowded", "station_crowded"],
+    "close" => ["closed", "station_closed"],
+    "reopen" => ["normal", "station_reopened"]
   }.freeze
 
   def self.call(station:, action:, reason: nil)
@@ -27,9 +27,10 @@ class SetStationStatus
       @station.with_lock do
         @station.update!(status:)
         @station.line.update!(
-          passenger_satisfaction_score: [ @station.line.passenger_satisfaction_score.to_i - score_penalty, 0 ].max
+          passenger_satisfaction_score: [@station.line.passenger_satisfaction_score.to_i - score_penalty, 0].max
         )
-        event = @station.line.operation_events.create!(
+        event = RecordOperationEvent.call(
+          line: @station.line,
           station: @station,
           event_type:,
           payload: {
@@ -55,12 +56,12 @@ class SetStationStatus
     return unless @action.in?(%w[raise_alert close])
     return if @reason.to_s.strip.present?
 
-    raise ArgumentError, "Reason is required for station #{@action.tr('_', ' ')}"
+    raise ArgumentError, "Reason is required for station #{@action.tr("_", " ")}"
   end
 
   def score_penalty
     return 0 if @action.in?(%w[clear_alert reopen])
 
-    @action == "close" ? 3 : 1
+    (@action == "close") ? 3 : 1
   end
 end

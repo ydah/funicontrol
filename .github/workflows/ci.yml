@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
+      RUBOCOP_CACHE_ROOT: tmp/rubocop_cache
+      BRAKEMAN_ENSURE_LATEST: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - run: bin/rails db:prepare
+      - run: bin/rails funicular:compile
+      - run: bin/rails test
+      - run: bin/rails test:system
+      - run: bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error
+      - run: bin/bundler-audit
+      - run: bundle exec standardrb

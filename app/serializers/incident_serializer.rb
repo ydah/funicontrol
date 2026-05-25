@@ -11,6 +11,7 @@ class IncidentSerializer < ApplicationSerializer
       title: record.title,
       description: record.description,
       photo_url: photo_url,
+      thumbnail_url: thumbnail_url,
       photo_filename: photo_filename,
       attachments: attachments,
       open_seconds: record.open_seconds,
@@ -43,6 +44,16 @@ class IncidentSerializer < ApplicationSerializer
     primary_attachment&.filename&.to_s
   end
 
+  def thumbnail_url
+    attachment = active_attachments.find { |candidate| candidate.blob.content_type.to_s.start_with?("image/") }
+    return nil unless attachment
+
+    variant = attachment.variant(resize_to_limit: [360, 240])
+    Rails.application.routes.url_helpers.rails_representation_path(variant, only_path: true)
+  rescue LoadError, StandardError
+    photo_url
+  end
+
   def attachments
     active_attachments.map do |attachment|
       blob = attachment.blob
@@ -51,9 +62,21 @@ class IncidentSerializer < ApplicationSerializer
         filename: blob.filename.to_s,
         content_type: blob.content_type,
         byte_size: blob.byte_size,
-        url: Rails.application.routes.url_helpers.rails_blob_path(blob, only_path: true)
+        url: Rails.application.routes.url_helpers.rails_blob_path(blob, only_path: true),
+        thumbnail_url: attachment_thumbnail_url(attachment)
       }
     end
+  end
+
+  def attachment_thumbnail_url(attachment)
+    return nil unless attachment.blob.content_type.to_s.start_with?("image/")
+
+    Rails.application.routes.url_helpers.rails_representation_path(
+      attachment.variant(resize_to_limit: [240, 160]),
+      only_path: true
+    )
+  rescue LoadError, StandardError
+    nil
   end
 
   def primary_attachment

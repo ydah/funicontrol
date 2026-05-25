@@ -2,7 +2,7 @@ module Api
   module Lines
     class StationsController < ApplicationController
       def index
-        line = Line.find(params[:line_id])
+        line = find_line(params[:line_id])
         render json: StationSerializer.render_collection(line.stations)
       end
 
@@ -29,7 +29,7 @@ module Api
       private
 
       def update_status(action)
-        line = Line.find(params[:line_id])
+        line = find_line(params[:line_id])
         station = line.stations.find(params[:id])
         result = SetStationStatus.call(station:, action:, reason: params[:reason])
         LineBroadcaster.broadcast_station_updated(line:, station: result.station, event: result.event)

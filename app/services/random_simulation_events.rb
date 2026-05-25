@@ -32,7 +32,7 @@ class RandomSimulationEvents
     station = line.stations.sample(random:)
     return unless station
 
-    station.update!(passenger_level: [ station.passenger_level.to_i + random.rand(5..20), 100 ].min)
+    station.update!(passenger_level: [station.passenger_level.to_i + random.rand(5..20), 100].min)
     return unless station.passenger_level >= 80 && station.status == "normal"
 
     SetStationStatus.call(station:, action: "mark_crowded", reason: "simulated crowding")

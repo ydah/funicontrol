@@ -12,7 +12,7 @@ class DispatchConsoleComponent < ApplicationComponent
   end
 
   def initialize_state
-    { reason: "", pending_action: nil, is_dispatching: false, notice: nil, error: nil }
+    {reason: "", pending_action: nil, is_dispatching: false, notice: nil, error: nil}
   end
 
   def component_mounted
@@ -87,10 +87,10 @@ class DispatchConsoleComponent < ApplicationComponent
     patch(is_dispatching: true, notice: nil, error: nil, pending_action: nil)
     Car.new(car_data).dispatch(action: action, reason: state.reason, current_line_id: props[:line_id]) do |response|
       if response.ok
-        props[:on_dispatch].call(response.data) if props[:on_dispatch]
+        props[:on_dispatch]&.call(response.data)
         patch(is_dispatching: false, notice: "Command accepted", error: nil)
       else
-        props[:on_error].call(response) if props[:on_error]
+        props[:on_error]&.call(response)
         patch(is_dispatching: false, notice: nil, error: response.error_message.to_s)
       end
     end
@@ -116,7 +116,7 @@ class DispatchConsoleComponent < ApplicationComponent
   end
 
   def recover_label
-    value(props[:car], :status).to_s == "emergency" ? "Inspect" : "Recover"
+    (value(props[:car], :status).to_s == "emergency") ? "Inspect" : "Recover"
   end
 
   def reason_valid_for?(action)

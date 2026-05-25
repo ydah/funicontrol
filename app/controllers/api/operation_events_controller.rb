@@ -1,7 +1,7 @@
 module Api
   class OperationEventsController < ApplicationController
     def index
-      line = Line.find(params[:line_id])
+      line = find_line(params[:line_id])
       events = line.operation_events
       events = events.where("id > ?", params[:after_id]) if params[:after_id].present?
       events = events.where("id < ?", params[:before_id]) if params[:before_id].present?
@@ -11,7 +11,7 @@ module Api
       events = events.where(car_id: params[:car_id]) if params[:car_id].present?
       events = events.where(station_id: params[:station_id]) if params[:station_id].present?
       events = events.where(incident_id: params[:incident_id]) if params[:incident_id].present?
-      events = events.joins(:incident).where(incidents: { severity: params[:severity] }) if params[:severity].present?
+      events = events.joins(:incident).where(incidents: {severity: params[:severity]}) if params[:severity].present?
       events = ordered(events).limit(limit)
 
       render json: OperationEventSerializer.render_collection(events)
@@ -32,7 +32,7 @@ module Api
     end
 
     def limit
-      [[ params.fetch(:limit, 100).to_i, 1 ].max, 300].min
+      params.fetch(:limit, 100).to_i.clamp(1, 300)
     end
   end
 end

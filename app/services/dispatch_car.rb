@@ -42,6 +42,7 @@ class DispatchCar
 
     case action
     when "start"
+      raise ArgumentError, "Emergency must be recovered before start" if car.status == "emergency"
       raise ArgumentError, "Inspection must be cleared before start" if car.status == "inspection_required"
 
       record_departure_if_needed
@@ -49,18 +50,18 @@ class DispatchCar
     when "stop"
       car.update!(status: "stopped", speed: 0.0, direction: "idle", dwell_until: nil, last_seen_at: now)
     when "slow"
-      car.update!(status: "slow", speed: 0.008, direction: car.direction == "idle" ? inferred_direction : car.direction, operation_mode: "manual", dwell_until: nil, last_seen_at: now)
+      car.update!(status: "slow", speed: 0.008, direction: (car.direction == "idle") ? inferred_direction : car.direction, operation_mode: "manual", dwell_until: nil, last_seen_at: now)
     when "emergency_stop"
       car.update!(status: "emergency", speed: 0.0, direction: "idle", operation_mode: "inspection", dwell_until: nil, last_seen_at: now)
     when "recover"
-      next_status = car.status == "emergency" ? "inspection_required" : "stopped"
-      next_mode = next_status == "inspection_required" ? "inspection" : "manual"
+      next_status = (car.status == "emergency") ? "inspection_required" : "stopped"
+      next_mode = (next_status == "inspection_required") ? "inspection" : "manual"
       car.update!(status: next_status, speed: 0.0, direction: "idle", operation_mode: next_mode, dwell_until: nil, last_seen_at: now)
     end
   end
 
   def record_event!(event_type, station: nil, payload: {})
-    event = OperationEvent.create!(
+    event = RecordOperationEvent.call(
       line: car.line,
       car:,
       station:,
@@ -73,7 +74,7 @@ class DispatchCar
   end
 
   def inferred_direction
-    car.position.to_f >= 0.5 ? "down" : "up"
+    (car.position.to_f >= 0.5) ? "down" : "up"
   end
 
   def validate_reason!

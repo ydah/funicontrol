@@ -1,7 +1,7 @@
 module Api
   class ScenariosController < ApplicationController
     def import
-      line = Line.find(params[:line_id])
+      line = find_line(params[:line_id])
       events = ImportScenarioEvents.call(line:, events: params[:events])
 
       render json: {

@@ -1,7 +1,7 @@
 module Api
   class ReportsController < ApplicationController
     def daily
-      line = Line.find(params[:line_id])
+      line = find_line(params[:line_id])
       report = GenerateDailyReport.call(line:, report_date: report_date)
 
       render json: {

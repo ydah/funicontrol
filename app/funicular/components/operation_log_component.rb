@@ -1,6 +1,6 @@
 class OperationLogComponent < ApplicationComponent
   def initialize_state
-    { important_only: false, event_type: "" }
+    {important_only: false, event_type: ""}
   end
 
   def component_mounted
@@ -35,7 +35,7 @@ class OperationLogComponent < ApplicationComponent
         end
         latest_id = object_id(filtered_events.first)
         filtered_events.each do |event|
-          item_class = object_id(event) == latest_id ? "log-item log-item-new" : "log-item"
+          item_class = (object_id(event) == latest_id) ? "log-item log-item-new" : "log-item"
           div(class: item_class, id: "event-#{value(event, :id)}") do
             span(class: "log-time") { format_time(value(event, :occurred_at)) }
             span(class: "log-type") { event_label(event) }

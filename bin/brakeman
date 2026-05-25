@@ -2,6 +2,6 @@
 require "rubygems"
 require "bundler/setup"
 
-ARGV.unshift("--ensure-latest")
+ARGV.unshift("--ensure-latest") unless ENV["BRAKEMAN_ENSURE_LATEST"] == "0"
 
 load Gem.bin_path("brakeman", "brakeman")

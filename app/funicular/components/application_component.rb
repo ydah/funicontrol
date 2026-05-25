@@ -25,6 +25,7 @@ class ApplicationComponent < Funicular::Component
         end
         div(class: "topbar-pills") do
           span(class: "system-pill") { network_label }
+          span(class: "system-pill") { "score mode" } if score_mode?
           span(class: "system-pill") { title }
         end
       end
@@ -32,7 +33,7 @@ class ApplicationComponent < Funicular::Component
         component(NavigationComponent)
         section(class: "screen") do
           h2(class: "screen-title") { title }
-          block.call if block
+          block&.call
         end
       end
     end
@@ -75,13 +76,13 @@ class ApplicationComponent < Funicular::Component
   def replace_by_id(items, item)
     item_id = object_id(item)
     items.map do |existing|
-      object_id(existing) == item_id ? item : existing
+      (object_id(existing) == item_id) ? item : existing
     end
   end
 
   def prepend_unique(items, item, limit = 100)
     item_id = object_id(item)
-    next_items = [ item ] + items.reject { |existing| object_id(existing) == item_id }
+    next_items = [item] + items.reject { |existing| object_id(existing) == item_id }
     limit_collection(next_items, limit)
   end
 
@@ -139,7 +140,7 @@ class ApplicationComponent < Funicular::Component
   end
 
   def cable_url
-    protocol = JS.global.location.protocol.to_s == "https:" ? "wss://" : "ws://"
+    protocol = (JS.global.location.protocol.to_s == "https:") ? "wss://" : "ws://"
     "#{protocol}#{JS.global.location.host}/cable"
   end
 
@@ -182,8 +183,8 @@ class ApplicationComponent < Funicular::Component
     end
     JS.global[result_key.to_sym] = nil
 
-    result = raw_result ? JSON.parse(raw_result.to_s) : { "ok" => false, "data" => { "errors" => { "base" => [ "Upload timed out" ] } } }
-    block.call(result) if block
+    result = raw_result ? JSON.parse(raw_result.to_s) : {"ok" => false, "data" => {"errors" => {"base" => ["Upload timed out"]}}}
+    block&.call(result)
   end
 
   def serialize_collection(items)
@@ -200,13 +201,21 @@ class ApplicationComponent < Funicular::Component
   end
 
   def network_label
-    return "offline" if JS.global[:navigator] && JS.global.navigator[:onLine] == false
-
-    "online"
+    offline? ? "offline" : "online"
   end
 
   def offline?
-    JS.global[:navigator] && JS.global.navigator[:onLine] == false
+    navigator = JS.global[:navigator]
+    return false unless navigator
+
+    navigator[:onLine] == false
+  end
+
+  def score_mode?
+    return true if query_param("mode").to_s == "score"
+
+    prefs = OperatorPrefsStore.where.value || {}
+    value(prefs, :score_mode).to_s == "true"
   end
 
   def query_param(name)
@@ -232,13 +241,11 @@ class ApplicationComponent < Funicular::Component
   def indexed_value(object, key)
     return nil unless object.respond_to?(:[])
 
-    [ key.to_sym, key.to_s ].each do |lookup_key|
-      begin
-        candidate = object[lookup_key]
-        return candidate unless candidate.nil?
-      rescue
-        next
-      end
+    [key.to_sym, key.to_s].each do |lookup_key|
+      candidate = object[lookup_key]
+      return candidate unless candidate.nil?
+    rescue
+      next
     end
 
     nil

@@ -7,7 +7,7 @@ class ReplayPanelComponent < ApplicationComponent
           line = Line.new(line_response.data)
           Funicular::HTTP.get_cached("/api/lines/#{line_id}/operation_events?limit=200&order=asc") do |response|
             if response.ok
-              resolve.call({ line: line, events: response.data })
+              resolve.call({line: line, events: response.data})
             else
               reject.call(response.error_message)
             end
@@ -85,8 +85,7 @@ class ReplayPanelComponent < ApplicationComponent
           stations: state.replay_stations,
           cars: state.replay_cars,
           track_segments: state.track_segments,
-          selected_car_id: nil
-        )
+          selected_car_id: nil)
         component(OperationLogComponent, events: visible_events, scroll_key: "replay")
       end
     end

@@ -96,22 +96,16 @@ module Funicular
           @expires_in_seconds = seconds
         end
 
-        def expires_in_seconds
-          @expires_in_seconds
-        end
+        attr_reader :expires_in_seconds
 
         def cleared_on(event, &block)
           @clear_event = event
           @clear_handler = block
         end
 
-        def clear_event
-          @clear_event
-        end
+        attr_reader :clear_event
 
-        def clear_handler
-          @clear_handler
-        end
+        attr_reader :clear_handler
 
         def where(kwargs = {})
           @scopes ||= {}
@@ -145,7 +139,7 @@ module Funicular
         end
 
         def order(value)
-          @order = value
+          @order = value.to_sym
         end
 
         def order_name
@@ -284,7 +278,7 @@ module Funicular
         expires_at = nil
         ttl = @store_class.expires_in_seconds
         expires_at = Time.now.to_i + ttl if ttl
-        entry = { value: value, expires_at: expires_at }
+        entry = {value: value, expires_at: expires_at}
         local_storage&.setItem(@storage_key, JSON.generate(entry))
         indexed_db_put(entry)
       end

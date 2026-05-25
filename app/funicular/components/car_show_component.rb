@@ -30,8 +30,8 @@ class CarShowComponent < ApplicationComponent
     @mounted = false
     JS.global.clearTimeout(@operation_events_poll_timer_id) if @operation_events_poll_timer_id
     @operation_events_poll_timer_id = nil
-    @subscription.unsubscribe if @subscription
-    @consumer.disconnect if @consumer
+    @subscription&.unsubscribe
+    @consumer&.disconnect
   end
 
   def render
@@ -69,8 +69,7 @@ class CarShowComponent < ApplicationComponent
                 line_id: value(state.car, :line_id),
                 line_status: "normal",
                 disabled: offline?,
-                on_dispatch: method(:handle_dispatch_response)
-              )
+                on_dispatch: method(:handle_dispatch_response))
             end
           end
         end
@@ -107,14 +106,14 @@ class CarShowComponent < ApplicationComponent
 
   def handle_line_message(message)
     if (message["type"] == "car_position_updated" || message["type"] == "operation_event") &&
-       object_id(message["car"]) == object_id(state.car)
+        object_id(message["car"]) == object_id(state.car)
       patch(car: Car.new(message["car"]))
       append_operation_event(message["event"])
     end
   end
 
   def append_operation_event(event)
-    patch(operation_events: merge_unique_by_id(state.operation_events, [ event ], 100))
+    patch(operation_events: merge_unique_by_id(state.operation_events, [event], 100))
   end
 
   def handle_dispatch_response(data)

@@ -19,7 +19,7 @@ class CreateFunicontrolDomain < ActiveRecord::Migration[8.1]
 
       t.timestamps
     end
-    add_index :stations, [ :line_id, :position ]
+    add_index :stations, [:line_id, :position]
 
     create_table :cars do |t|
       t.references :line, null: false, foreign_key: true
@@ -33,7 +33,7 @@ class CreateFunicontrolDomain < ActiveRecord::Migration[8.1]
 
       t.timestamps
     end
-    add_index :cars, [ :line_id, :code ], unique: true
+    add_index :cars, [:line_id, :code], unique: true
 
     create_table :incidents do |t|
       t.references :line, null: false, foreign_key: true
@@ -48,8 +48,8 @@ class CreateFunicontrolDomain < ActiveRecord::Migration[8.1]
 
       t.timestamps
     end
-    add_index :incidents, [ :line_id, :status ]
-    add_index :incidents, [ :line_id, :severity ]
+    add_index :incidents, [:line_id, :status]
+    add_index :incidents, [:line_id, :severity]
 
     create_table :incident_comments do |t|
       t.references :incident, null: false, foreign_key: true
@@ -70,8 +70,8 @@ class CreateFunicontrolDomain < ActiveRecord::Migration[8.1]
 
       t.timestamps
     end
-    add_index :operation_events, [ :line_id, :occurred_at ]
-    add_index :operation_events, [ :line_id, :id ]
+    add_index :operation_events, [:line_id, :occurred_at]
+    add_index :operation_events, [:line_id, :id]
     add_index :operation_events, :event_type
   end
 end

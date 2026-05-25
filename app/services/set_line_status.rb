@@ -2,10 +2,10 @@ class SetLineStatus
   Result = Data.define(:line, :event)
 
   ACTIONS = {
-    "suspend" => [ "suspended", "line_suspended" ],
-    "resume" => [ "normal", "line_resumed" ],
-    "enter_maintenance" => [ "maintenance", "line_maintenance_started" ],
-    "exit_maintenance" => [ "normal", "line_maintenance_ended" ]
+    "suspend" => ["suspended", "line_suspended"],
+    "resume" => ["normal", "line_resumed"],
+    "enter_maintenance" => ["maintenance", "line_maintenance_started"],
+    "exit_maintenance" => ["normal", "line_maintenance_ended"]
   }.freeze
 
   def self.call(line:, action:, reason: nil)
@@ -25,7 +25,8 @@ class SetLineStatus
     ActiveRecord::Base.transaction do
       @line.with_lock do
         @line.update!(status:, passenger_satisfaction_score: next_score(status))
-        event = @line.operation_events.create!(
+        event = RecordOperationEvent.call(
+          line: @line,
           event_type:,
           payload: {
             action: @action,
@@ -49,11 +50,11 @@ class SetLineStatus
     return unless @action.in?(%w[suspend enter_maintenance])
     return if @reason.to_s.strip.present?
 
-    raise ArgumentError, "Reason is required for line #{@action.tr('_', ' ')}"
+    raise ArgumentError, "Reason is required for line #{@action.tr("_", " ")}"
   end
 
   def next_score(status)
-    penalty = status == "normal" ? 0 : 2
-    [ @line.passenger_satisfaction_score.to_i - penalty, 0 ].max
+    penalty = (status == "normal") ? 0 : 2
+    [@line.passenger_satisfaction_score.to_i - penalty, 0].max
   end
 end

@@ -1,6 +1,6 @@
 class StationPanelComponent < ApplicationComponent
   def initialize_state
-    { reason: "", pending_station_id: nil, pending_action: nil, is_saving: false, notice: nil, error: nil }
+    {reason: "", pending_station_id: nil, pending_action: nil, is_saving: false, notice: nil, error: nil}
   end
 
   def render
@@ -31,7 +31,7 @@ class StationPanelComponent < ApplicationComponent
 
   def station_row(station)
     status = value(station, :status).to_s
-    div(class: "station-control-row #{status == "alert" ? "station-control-alert" : ""}") do
+    div(class: "station-control-row #{"station-control-alert" if status == "alert"}") do
       div do
         span(class: "station-name") { value(station, :name).to_s }
         span(class: "muted") { " #{status} / #{value(station, :passenger_level)}%" }
@@ -73,11 +73,11 @@ class StationPanelComponent < ApplicationComponent
 
     patch(is_saving: true, notice: nil, error: nil, pending_station_id: nil, pending_action: nil)
     url = "/api/lines/#{line_id}/stations/#{station_id}/#{action}"
-    Funicular::HTTP.post(url, { reason: state.reason }) do |response|
+    Funicular::HTTP.post(url, {reason: state.reason}) do |response|
       if response.ok
         Funicular::HTTP.expire_cache("/api/lines/#{line_id}")
         Funicular::HTTP.expire_cache("/api/lines/#{line_id}/stations")
-        props[:on_station_updated].call(response.data) if props[:on_station_updated]
+        props[:on_station_updated]&.call(response.data)
         patch(is_saving: false, notice: "Station #{action.tr("_", " ")} accepted", error: nil)
       else
         patch(is_saving: false, notice: nil, error: response.error_message.to_s)

@@ -2,5 +2,7 @@
 require_relative "../config/boot"
 require "bundler/audit/cli"
 
-ARGV.concat %w[ --config config/bundler-audit.yml ] if ARGV.empty? || ARGV.include?("check")
+if ARGV.empty? || ARGV.include?("check")
+  ARGV.concat %w[--config config/bundler-audit.yml --database tmp/ruby-advisory-db]
+end
 Bundler::Audit::CLI.start

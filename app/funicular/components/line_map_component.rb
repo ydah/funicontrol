@@ -55,6 +55,7 @@ class LineMapComponent < ApplicationComponent
         status = value(car, :status).to_s
         selected = object_id(car) == props[:selected_car_id].to_i
         car_class = selected ? "#{s.car(status.to_sym)} selected" : s.car(status.to_sym)
+        car_class = "#{car_class} stale-car" if value(car, :stale).to_s == "true"
         div(class: car_class, style: map_point_style(car), onclick: -> { select_car(car) }) do
           span(class: "car-code") { "#{direction_arrow(car)} #{value(car, :name)}" }
           span(class: "car-meta") { "#{status_label(status)} #{percent_position(car)}%" }
@@ -86,7 +87,7 @@ class LineMapComponent < ApplicationComponent
   end
 
   def select_car(car)
-    props[:on_select].call(object_id(car)) if props[:on_select]
+    props[:on_select]&.call(object_id(car))
   end
 
   def direction_arrow(car)

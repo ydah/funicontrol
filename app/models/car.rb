@@ -9,12 +9,12 @@ class Car < ApplicationRecord
   has_many :operation_events, dependent: :nullify
 
   validates :name, :code, :status, :direction, :operation_mode, presence: true
-  validates :code, uniqueness: { scope: :line_id }
-  validates :status, inclusion: { in: STATUSES }
-  validates :direction, inclusion: { in: DIRECTIONS }
-  validates :operation_mode, inclusion: { in: OPERATION_MODES }
-  validates :position, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
-  validates :speed, numericality: { greater_than_or_equal_to: 0 }
+  validates :code, uniqueness: {scope: :line_id}
+  validates :status, inclusion: {in: STATUSES}
+  validates :direction, inclusion: {in: DIRECTIONS}
+  validates :operation_mode, inclusion: {in: OPERATION_MODES}
+  validates :position, numericality: {greater_than_or_equal_to: 0, less_than_or_equal_to: 1}
+  validates :speed, numericality: {greater_than_or_equal_to: 0}
 
   def stale?(now = Time.current)
     last_seen_at.blank? || last_seen_at < STALE_AFTER.ago(now)
@@ -25,7 +25,7 @@ class Car < ApplicationRecord
     return stations.first if direction == "idle"
 
     if direction == "down"
-      stations.reverse.find { |station| station.position.to_f < position.to_f } || stations.first
+      stations.rfind { |station| station.position.to_f < position.to_f } || stations.first
     else
       stations.find { |station| station.position.to_f > position.to_f } || stations.last
     end

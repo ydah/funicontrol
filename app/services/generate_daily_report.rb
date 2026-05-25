@@ -41,7 +41,8 @@ class GenerateDailyReport
   end
 
   def record_event(report)
-    line.operation_events.create!(
+    RecordOperationEvent.call(
+      line:,
       event_type: "daily_report_generated",
       payload: {
         report_id: report.id,

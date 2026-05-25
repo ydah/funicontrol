@@ -32,6 +32,6 @@ class NavigationComponent < ApplicationComponent
 
   def line_nav_class
     current = Funicular.router ? Funicular.router.current_path.to_s : ""
-    current.start_with?("/lines/") || current.start_with?("/cars/") ? "nav-link active" : "nav-link"
+    current.start_with?("/lines/", "/cars/") ? "nav-link active" : "nav-link"
   end
 end

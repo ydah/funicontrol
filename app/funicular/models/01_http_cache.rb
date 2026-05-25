@@ -4,13 +4,13 @@ module Funicular
       cache = HttpCacheStore.where(cache_key: url.to_s)
       cached = cache.value
       if cached
-        block.call(Response.new(200, cached)) if block
+        block&.call(Response.new(200, cached))
         return
       end
 
       get(url) do |response|
         cache.value = response.data if response.ok
-        block.call(response) if block
+        block&.call(response)
       end
     end
 

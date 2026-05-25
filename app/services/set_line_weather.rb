@@ -19,7 +19,8 @@ class SetLineWeather
         weather_condition: @weather_condition,
         passenger_satisfaction_score: next_score
       )
-      event = @line.operation_events.create!(
+      event = RecordOperationEvent.call(
+        line: @line,
         event_type: "line_weather_changed",
         payload: {
           action: "set_weather",
@@ -37,7 +38,7 @@ class SetLineWeather
   private
 
   def next_score
-    penalty = @weather_condition == "clear" ? 0 : 1
-    [ @line.passenger_satisfaction_score.to_i - penalty, 0 ].max
+    penalty = (@weather_condition == "clear") ? 0 : 1
+    [@line.passenger_satisfaction_score.to_i - penalty, 0].max
   end
 end

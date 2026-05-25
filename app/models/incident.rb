@@ -27,9 +27,9 @@ class Incident < ApplicationRecord
   before_validation :default_severity
 
   validates :kind, :severity, :status, :title, presence: true
-  validates :kind, inclusion: { in: KINDS }
-  validates :severity, inclusion: { in: SEVERITIES }
-  validates :status, inclusion: { in: STATUSES }
+  validates :kind, inclusion: {in: KINDS}
+  validates :severity, inclusion: {in: SEVERITIES}
+  validates :status, inclusion: {in: STATUSES}
   validate :attachments_are_safe
 
   def acknowledge!
@@ -45,7 +45,7 @@ class Incident < ApplicationRecord
     return "resolved" if status == "resolved"
 
     threshold = severity.in?(%w[critical high]) ? 15.minutes : 60.minutes
-    open_seconds(now) > threshold ? "breached" : "ok"
+    (open_seconds(now) > threshold) ? "breached" : "ok"
   end
 
   private

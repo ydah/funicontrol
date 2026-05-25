@@ -17,10 +17,10 @@ class SettingsComponent < ApplicationComponent
         h3 { "Operator Preferences" }
         form_for(:prefs, on_submit: :save_prefs, class: "stack") do |f|
           field_group("Theme") do
-            f.select(:theme, [[ "dark", "Dark" ], [ "light", "Light" ]], class: "input")
+            f.select(:theme, [["dark", "Dark"], ["light", "Light"]], class: "input")
           end
           field_group("Density") do
-            f.select(:density, [[ "comfortable", "Comfortable" ], [ "compact", "Compact" ]], class: "input")
+            f.select(:density, [["comfortable", "Comfortable"], ["compact", "Compact"]], class: "input")
           end
           field_group("Operator") do
             f.text_field(:operator_name, class: "input")

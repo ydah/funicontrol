@@ -13,12 +13,13 @@ class ImportScenarioEvents
       event_type = attributes["event_type"] || attributes[:event_type]
       raise ArgumentError, "Unknown event type: #{event_type}" unless event_type.in?(OperationEvent::EVENT_TYPES)
 
-      line.operation_events.create!(
+      RecordOperationEvent.call(
+        line:,
         event_type:,
-        car_id: nullable_id(attributes["car_id"] || attributes[:car_id]),
-        station_id: nullable_id(attributes["station_id"] || attributes[:station_id]),
-        incident_id: nullable_id(attributes["incident_id"] || attributes[:incident_id]),
-        payload: attributes["payload"] || attributes[:payload] || {},
+        car: find_association(line.cars, attributes["car_id"] || attributes[:car_id]),
+        station: find_association(line.stations, attributes["station_id"] || attributes[:station_id]),
+        incident: find_association(line.incidents, attributes["incident_id"] || attributes[:incident_id]),
+        payload: payload_for(attributes),
         occurred_at: parse_time(attributes["occurred_at"] || attributes[:occurred_at])
       )
     end
@@ -34,7 +35,16 @@ class ImportScenarioEvents
     raise ArgumentError, "occurred_at must be an ISO 8601 timestamp"
   end
 
-  def nullable_id(value)
-    value.presence
+  def find_association(scope, value)
+    return nil if value.blank?
+
+    scope.find(value)
+  end
+
+  def payload_for(attributes)
+    payload = attributes["payload"] || attributes[:payload] || {}
+    return payload.to_unsafe_h if payload.respond_to?(:to_unsafe_h)
+
+    payload
   end
 end

@@ -18,6 +18,7 @@ class LineSerializer < ApplicationSerializer
         json[:open_incidents_count] = option_count(:open_incidents_counts) { record.incidents.where.not(status: "resolved").count }
         json[:running_cars_count] = option_count(:running_cars_counts) { record.cars.where(status: %w[running slow]).count }
         json[:critical_incidents_count] = option_count(:critical_incidents_counts) { record.open_critical_incidents_count }
+        json[:sla_breached_incidents_count] = option_count(:sla_breached_incidents_counts) { sla_breached_incidents_count }
       end
       if options[:include_recent_events]
         events = options.fetch(:recent_events_by_line, {})[record.id] || record.operation_events.important.reverse_chronological.limit(10)
@@ -33,5 +34,11 @@ class LineSerializer < ApplicationSerializer
     return counts.fetch(record.id, 0) if counts
 
     yield
+  end
+
+  def sla_breached_incidents_count
+    record.incidents.where(status: %w[open acknowledged], severity: %w[high critical]).count do |incident|
+      incident.sla_status == "breached"
+    end
   end
 end

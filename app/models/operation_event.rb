@@ -17,7 +17,7 @@ class OperationEvent < ApplicationRecord
   belongs_to :incident, optional: true
 
   validates :event_type, :occurred_at, presence: true
-  validates :event_type, inclusion: { in: EVENT_TYPES }
+  validates :event_type, inclusion: {in: EVENT_TYPES}
 
   scope :chronological, -> { order(occurred_at: :asc, id: :asc) }
   scope :reverse_chronological, -> { order(occurred_at: :desc, id: :desc) }
@@ -30,27 +30,27 @@ class OperationEvent < ApplicationRecord
   def summary
     case event_type
     when "car_position_updated"
-      "#{payload['car_name'] || 'Car'} at #{percentage(payload['position'])}"
+      "#{payload["car_name"] || "Car"} at #{percentage(payload["position"])}"
     when "car_arrived_station"
-      "#{payload['car_name'] || 'Car'} arrived at #{payload['station_name']}"
+      "#{payload["car_name"] || "Car"} arrived at #{payload["station_name"]}"
     when "car_departed_station"
-      "#{payload['car_name'] || 'Car'} departed #{payload['station_name']}"
+      "#{payload["car_name"] || "Car"} departed #{payload["station_name"]}"
     when "car_distance_warning"
-      "Spacing warning: #{payload['distance']}"
+      "Spacing warning: #{payload["distance"]}"
     when "incident_created"
-      "Incident opened: #{payload['title']}"
+      "Incident opened: #{payload["title"]}"
     when "incident_acknowledged"
-      "Incident acknowledged: #{payload['title']}"
+      "Incident acknowledged: #{payload["title"]}"
     when "incident_resolved"
-      "Incident resolved: #{payload['title']}"
+      "Incident resolved: #{payload["title"]}"
     when "comment_created"
-      "Comment by #{payload['author_name']}"
+      "Comment by #{payload["author_name"]}"
     when "notification_raised"
-      "Notification: #{payload['title']}"
+      "Notification: #{payload["title"]}"
     when "line_weather_changed"
-      "Weather changed to #{payload['weather_condition']}"
+      "Weather changed to #{payload["weather_condition"]}"
     when "operator_message_sent"
-      "#{payload['operator_name'] || 'Operator'}: #{payload['message']}"
+      "#{payload["operator_name"] || "Operator"}: #{payload["message"]}"
     else
       event_type.tr("_", " ")
     end

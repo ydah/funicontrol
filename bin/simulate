@@ -12,6 +12,16 @@ puts "Starting Funicontrol simulation..."
 tick = 0
 tick_interval = ENV.fetch("SIM_TICK_INTERVAL", "1").to_f
 random_events_enabled = ENV["SIM_RANDOM_EVENTS"] == "1"
+if ENV["SIM_ACTIVE_JOB"] == "1"
+  SimulationTickJob.perform_later(
+    continue: true,
+    interval: tick_interval,
+    random_events: random_events_enabled
+  )
+  puts "Enqueued SimulationTickJob with #{tick_interval}s interval"
+  exit
+end
+
 loop do
   Rails.application.executor.wrap do
     ActiveRecord::Base.connection.clear_query_cache

@@ -1,6 +1,6 @@
 class LineStatusPanelComponent < ApplicationComponent
   def initialize_state
-    { reason: "", weather_condition: "clear", pending_action: nil, is_saving: false, notice: nil, error: nil }
+    {reason: "", weather_condition: "clear", pending_action: nil, is_saving: false, notice: nil, error: nil}
   end
 
   def render
@@ -57,7 +57,13 @@ class LineStatusPanelComponent < ApplicationComponent
       class: confirm ? "button primary" : "button secondary",
       disabled: state.is_saving || props[:disabled] || inactive,
       onclick: -> { confirm ? update_line(action) : patch(pending_action: action, notice: nil, error: nil) }
-    ) { state.is_saving ? "..." : (confirm ? "Confirm #{label_text}" : label_text) }
+    ) {
+      if state.is_saving
+        "..."
+      else
+        (confirm ? "Confirm #{label_text}" : label_text)
+      end
+    }
   end
 
   def update_line(action)
@@ -70,11 +76,11 @@ class LineStatusPanelComponent < ApplicationComponent
     end
 
     patch(is_saving: true, notice: nil, error: nil, pending_action: nil)
-    Funicular::HTTP.post("/api/lines/#{line_id}/#{action}", { reason: state.reason }) do |response|
+    Funicular::HTTP.post("/api/lines/#{line_id}/#{action}", {reason: state.reason}) do |response|
       if response.ok
         Funicular::HTTP.expire_cache("/api/lines")
         Funicular::HTTP.expire_cache("/api/lines/#{line_id}")
-        props[:on_line_updated].call(response.data) if props[:on_line_updated]
+        props[:on_line_updated]&.call(response.data)
         patch(is_saving: false, notice: "Line #{action} accepted", error: nil)
       else
         patch(is_saving: false, notice: nil, error: response.error_message.to_s)
@@ -87,11 +93,11 @@ class LineStatusPanelComponent < ApplicationComponent
     return unless line_id > 0
 
     patch(is_saving: true, notice: nil, error: nil)
-    Funicular::HTTP.post("/api/lines/#{line_id}/weather", { weather_condition: state.weather_condition, reason: state.reason }) do |response|
+    Funicular::HTTP.post("/api/lines/#{line_id}/weather", {weather_condition: state.weather_condition, reason: state.reason}) do |response|
       if response.ok
         Funicular::HTTP.expire_cache("/api/lines")
         Funicular::HTTP.expire_cache("/api/lines/#{line_id}")
-        props[:on_line_updated].call(response.data) if props[:on_line_updated]
+        props[:on_line_updated]&.call(response.data)
         patch(is_saving: false, notice: "Weather updated", error: nil)
       else
         patch(is_saving: false, notice: nil, error: response.error_message.to_s)

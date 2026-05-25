@@ -73,7 +73,7 @@ class AdvanceCarPositions
       next_direction = "up"
     end
 
-    next_status = effective_speed <= SLOW_SPEED ? "slow" : car.status
+    next_status = (effective_speed <= SLOW_SPEED) ? "slow" : car.status
     car.update!(
       position: next_position,
       direction: next_direction,
@@ -87,7 +87,7 @@ class AdvanceCarPositions
   end
 
   def record_position_event(car, previous_position)
-    event = OperationEvent.create!(
+    RecordOperationEvent.call(
       line: car.line,
       car:,
       event_type: "car_position_updated",
@@ -100,11 +100,10 @@ class AdvanceCarPositions
       ),
       occurred_at: now
     )
-    event
   end
 
   def record_arrival_event(car, station)
-    OperationEvent.create!(
+    RecordOperationEvent.call(
       line: car.line,
       car:,
       station:,
@@ -119,7 +118,7 @@ class AdvanceCarPositions
   end
 
   def record_departure_event(car, station)
-    OperationEvent.create!(
+    RecordOperationEvent.call(
       line: car.line,
       car:,
       station:,
@@ -134,14 +133,14 @@ class AdvanceCarPositions
 
   def position_delta(car, effective_speed)
     delta = effective_speed * elapsed_seconds(car)
-    car.direction == "down" ? -delta : delta
+    (car.direction == "down") ? -delta : delta
   end
 
   def elapsed_seconds(car)
     last_seen = car.last_seen_at
     return 1.0 unless last_seen
 
-    [[ now - last_seen, 0.2 ].max, MAX_ELAPSED_SECONDS].min
+    (now - last_seen).clamp(0.2, MAX_ELAPSED_SECONDS)
   end
 
   def release_dwell_if_ready(car)
@@ -176,7 +175,7 @@ class AdvanceCarPositions
   end
 
   def record_spacing_event(car, other_car, distance)
-    OperationEvent.create!(
+    RecordOperationEvent.call(
       line: car.line,
       car:,
       event_type: "car_distance_warning",
@@ -190,17 +189,16 @@ class AdvanceCarPositions
   end
 
   def recent_spacing_warning?(car, other_car)
-    car.line.operation_events.where(event_type: "car_distance_warning", car_id: [ car.id, other_car.id ])
+    car.line.operation_events.where(event_type: "car_distance_warning", car_id: [car.id, other_car.id])
       .where("occurred_at >= ?", 30.seconds.ago(now))
       .exists?
   end
 
   def speed_for(car)
-    speed = car.status == "slow" ? SLOW_SPEED : NORMAL_SPEED
-    speed = [ speed, weather_speed_limit ].compact.min
-    speed = [ speed, track_speed_limit(car.position) ].compact.min
-    speed = [ speed, station_speed_limit(car.position) ].compact.min
-    speed
+    speed = (car.status == "slow") ? SLOW_SPEED : NORMAL_SPEED
+    speed = [speed, weather_speed_limit].compact.min
+    speed = [speed, track_speed_limit(car.position)].compact.min
+    [speed, station_speed_limit(car.position)].compact.min
   end
 
   def weather_speed_limit
@@ -235,9 +233,9 @@ class AdvanceCarPositions
       next if (station_position - previous_position).abs <= ARRIVAL_EPSILON
 
       if direction == "down"
-        station_position <= previous_position && station_position >= next_position
+        station_position.between?(next_position, previous_position)
       else
-        station_position >= previous_position && station_position <= next_position
+        station_position.between?(previous_position, next_position)
       end
     end
   end
@@ -254,7 +252,7 @@ class AdvanceCarPositions
   end
 
   def inferred_direction(car)
-    car.position.to_f >= 0.5 ? "down" : "up"
+    (car.position.to_f >= 0.5) ? "down" : "up"
   end
 
   def record_position_event?(car, previous_position)

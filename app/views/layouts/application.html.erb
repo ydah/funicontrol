@@ -26,6 +26,13 @@
     <%= javascript_include_tag "operation_log_scroll" %>
     <%= javascript_include_tag "funicontrol_upload" %>
     <script>
+      window.FunicontrolBootErrors = [];
+      window.addEventListener("error", function(event) {
+        window.FunicontrolBootErrors.push(event.message || String(event.error || event));
+      });
+      window.addEventListener("unhandledrejection", function(event) {
+        window.FunicontrolBootErrors.push(String(event.reason || event));
+      });
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/service-worker.js");
       }

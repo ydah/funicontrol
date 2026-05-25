@@ -94,8 +94,8 @@ class LineShowComponent < ApplicationComponent
     JS.global.clearTimeout(@operation_events_poll_timer_id) if @operation_events_poll_timer_id
     @line_poll_timer_id = nil
     @operation_events_poll_timer_id = nil
-    @subscription.unsubscribe if @subscription
-    @consumer.disconnect if @consumer
+    @subscription&.unsubscribe
+    @consumer&.disconnect
   end
 
   def render
@@ -134,8 +134,7 @@ class LineShowComponent < ApplicationComponent
                   cars: state.cars,
                   track_segments: state.track_segments,
                   selected_car_id: selected_car_id,
-                  on_select: method(:select_car)
-                )
+                  on_select: method(:select_car))
               end
             end
             div(class: "panel fleet-panel") do
@@ -148,8 +147,7 @@ class LineShowComponent < ApplicationComponent
                   component(CarCardComponent,
                     car: car,
                     selected: object_id(car) == selected_car_id.to_i,
-                    on_select: method(:select_car)
-                  )
+                    on_select: method(:select_car))
                 end
               end
             end
@@ -161,19 +159,16 @@ class LineShowComponent < ApplicationComponent
               line_status: value(state.line, :status),
               disabled: offline?,
               on_dispatch: method(:handle_dispatch_response),
-              on_error: method(:handle_dispatch_error)
-            )
+              on_error: method(:handle_dispatch_error))
             component(LineStatusPanelComponent,
               line: state.line,
               disabled: offline?,
-              on_line_updated: method(:handle_line_status_response)
-            )
+              on_line_updated: method(:handle_line_status_response))
             component(StationPanelComponent,
               line_id: props[:id],
               stations: state.stations,
               disabled: offline?,
-              on_station_updated: method(:handle_station_response)
-            )
+              on_station_updated: method(:handle_station_response))
             render_operator_chat
           end
         end
@@ -182,8 +177,7 @@ class LineShowComponent < ApplicationComponent
             line_id: props[:id],
             stations: state.stations,
             cars: state.cars,
-            on_created: method(:handle_incident_created)
-          )
+            on_created: method(:handle_incident_created))
           component(Funicular::ErrorBoundary, fallback: ->(error) {
             component(ErrorPanelComponent, title: "Operation log failed", message: error.message)
           }) do
@@ -258,7 +252,7 @@ class LineShowComponent < ApplicationComponent
   def append_operation_event(event)
     return unless event
 
-    next_events = merge_operation_events([ event ])
+    next_events = merge_operation_events([event])
     OperationLogCache.where(line_id: props[:id].to_s).replace(next_events)
     Funicular::HTTP.expire_cache("/api/lines/#{props[:id]}/operation_events?limit=100")
     Funicular::HTTP.expire_cache("/api/lines/#{props[:id]}/operation_events?limit=200")
@@ -379,7 +373,7 @@ class LineShowComponent < ApplicationComponent
       end
     end
 
-    replaced ? next_cars : [ car_data ] + cars
+    replaced ? next_cars : [car_data] + cars
   end
 
   def selection_candidate(cars)

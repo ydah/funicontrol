@@ -1,7 +1,7 @@
 module Api
   class CarsController < ApplicationController
     def show
-      render json: CarSerializer.render(Car.find(params[:id]))
+      render json: CarSerializer.render(dispatch_car_record)
     end
 
     def dispatch_car
@@ -18,7 +18,8 @@ module Api
     private
 
     def dispatch_car_record
-      Car.find(params[:id])
+      line = params[:line_id].present? ? find_line(params[:line_id]) : nil
+      find_car(params[:id], line:)
     end
 
     def dispatch_payload

@@ -13,7 +13,7 @@ class DashboardComponent < ApplicationComponent
     }
 
   def initialize_state
-    { lines: [], is_loading: true, error: nil }
+    {lines: [], is_loading: true, error: nil}
   end
 
   def render
@@ -27,6 +27,7 @@ class DashboardComponent < ApplicationComponent
           summary_card("Running Cars", total_running_cars.to_s)
           summary_card("Open Incidents", total_open_incidents.to_s)
           summary_card("Critical", total_critical_incidents.to_s)
+          summary_card("SLA Breached", total_sla_breached.to_s)
         end
         div(class: "line-list") do
           state.lines.each do |line|
@@ -65,5 +66,9 @@ class DashboardComponent < ApplicationComponent
 
   def total_critical_incidents
     state.lines.map { |line| value(line, :critical_incidents_count).to_i }.reduce(0) { |sum, count| sum + count }
+  end
+
+  def total_sla_breached
+    state.lines.map { |line| value(line, :sla_breached_incidents_count).to_i }.reduce(0) { |sum, count| sum + count }
   end
 end

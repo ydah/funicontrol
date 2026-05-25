@@ -8,7 +8,7 @@ class IncidentShowComponent < ApplicationComponent
     on_resolve: ->(incident) {
       comments = value(incident, :incident_comments) || []
       operator_name = value(OperatorPrefsStore.where.value || {}, :operator_name) || "operator"
-      patch(is_loading: false, incident: incident, comments: comments, comment: { author_name: operator_name, body: "" })
+      patch(is_loading: false, incident: incident, comments: comments, comment: {author_name: operator_name, body: ""})
       subscribe_line_channel(value(incident, :line_id))
     }
 
@@ -16,7 +16,7 @@ class IncidentShowComponent < ApplicationComponent
     {
       incident: nil,
       comments: [],
-      comment: { author_name: "operator", body: "" },
+      comment: {author_name: "operator", body: ""},
       errors: {},
       is_loading: true,
       is_saving: false,
@@ -25,8 +25,8 @@ class IncidentShowComponent < ApplicationComponent
   end
 
   def component_will_unmount
-    @subscription.unsubscribe if @subscription
-    @consumer.disconnect if @consumer
+    @subscription&.unsubscribe
+    @consumer&.disconnect
   end
 
   def render
@@ -36,45 +36,46 @@ class IncidentShowComponent < ApplicationComponent
         error: ->(error) { p(class: "form-error") { error.to_s } }
       ) do
         if state.incident
-        incident = state.incident
-        div(class: "detail-grid") do
-          div(class: "panel") do
-            div(class: "row spread") do
-              h3 { value(incident, :title).to_s }
-              span(class: "status-chip") { value(incident, :status).to_s }
-            end
-            p(class: "muted") { "#{value(incident, :kind)} / #{severity_label(value(incident, :severity))}" }
-            p(class: "muted") { "SLA #{value(incident, :sla_status)} / open #{value(incident, :open_seconds)}s" }
-            p { value(incident, :description).to_s }
-            attachments = value(incident, :attachments) || []
-            attachments.each do |attachment|
-              if value(attachment, :content_type).to_s.start_with?("image/")
-                img(src: value(attachment, :url).to_s, class: "incident-photo")
-              else
-                link_to value(attachment, :url).to_s, class: "button secondary" do
-                  span { value(attachment, :filename).to_s }
+          incident = state.incident
+          div(class: "detail-grid") do
+            div(class: "panel") do
+              div(class: "row spread") do
+                h3 { value(incident, :title).to_s }
+                span(class: "status-chip") { value(incident, :status).to_s }
+              end
+              p(class: "muted") { "#{value(incident, :kind)} / #{severity_label(value(incident, :severity))}" }
+              p(class: "muted") { "SLA #{value(incident, :sla_status)} / open #{value(incident, :open_seconds)}s" }
+              p { value(incident, :description).to_s }
+              attachments = value(incident, :attachments) || []
+              attachments.each do |attachment|
+                if value(attachment, :content_type).to_s.start_with?("image/")
+                  img(src: (value(attachment, :thumbnail_url) || value(attachment, :url)).to_s, class: "incident-photo")
+                else
+                  link_to value(attachment, :url).to_s, class: "button secondary" do
+                    span { value(attachment, :filename).to_s }
+                  end
                 end
+                button(class: "button compact secondary", onclick: -> { purge_attachment(attachment) }, disabled: value(incident, :status) == "resolved") { "Remove" }
+              end
+              div(class: "row") do
+                button(class: "button secondary", onclick: :acknowledge_incident, disabled: value(incident, :status) != "open") { "Acknowledge" }
+                button(class: "button primary", onclick: :resolve_incident, disabled: value(incident, :status) == "resolved") { "Resolve" }
               end
             end
-            div(class: "row") do
-              button(class: "button secondary", onclick: :acknowledge_incident, disabled: value(incident, :status) != "open") { "Acknowledge" }
-              button(class: "button primary", onclick: :resolve_incident, disabled: value(incident, :status) == "resolved") { "Resolve" }
+            div(class: "panel") do
+              h3 { "Comments" }
+              component(IncidentCommentListComponent, comments: state.comments)
+              form_for(:comment, on_submit: :submit_comment, class: "stack") do |f|
+                field_group("Author") { f.text_field(:author_name, class: "input") }
+                field_group("Comment") { f.textarea(:body, class: "input textarea", rows: 3) }
+                f.submit(state.is_saving ? "Posting..." : "Post comment", class: "button primary", disabled: state.is_saving)
+              end
+            end
+            div(class: "panel") do
+              h3 { "Related Events" }
+              component(OperationLogComponent, events: value(incident, :related_events) || [], scroll_key: "incident-#{props[:id]}", event_limit: 30)
             end
           end
-          div(class: "panel") do
-            h3 { "Comments" }
-            component(IncidentCommentListComponent, comments: state.comments)
-            form_for(:comment, on_submit: :submit_comment, class: "stack") do |f|
-              field_group("Author") { f.text_field(:author_name, class: "input") }
-              field_group("Comment") { f.textarea(:body, class: "input textarea", rows: 3) }
-              f.submit(state.is_saving ? "Posting..." : "Post comment", class: "button primary", disabled: state.is_saving)
-            end
-          end
-          div(class: "panel") do
-            h3 { "Related Events" }
-            component(OperationLogComponent, events: value(incident, :related_events) || [], scroll_key: "incident-#{props[:id]}", event_limit: 30)
-          end
-        end
         end
       end
     end
@@ -130,12 +131,21 @@ class IncidentShowComponent < ApplicationComponent
         Funicular::HTTP.expire_cache("/api/incidents/#{props[:id]}")
         patch(
           comments: prepend_unique(state.comments, response.data, 100),
-          comment: { author_name: value(state.comment, :author_name) || "operator", body: "" },
+          comment: {author_name: value(state.comment, :author_name) || "operator", body: ""},
           is_saving: false
         )
       else
         patch(errors: normalize_errors(response.data["errors"]), is_saving: false)
       end
+    end
+  end
+
+  def purge_attachment(attachment)
+    attachment_id = object_id(attachment)
+    return unless attachment_id > 0
+
+    Funicular::HTTP.delete("/api/incidents/#{props[:id]}/attachments/#{attachment_id}") do |response|
+      patch(incident: Incident.new(response.data)) if response.ok
     end
   end
 end

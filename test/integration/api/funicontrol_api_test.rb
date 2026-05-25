@@ -1,4 +1,5 @@
 require "test_helper"
+require "tempfile"
 
 class FunicontrolApiTest < ActionDispatch::IntegrationTest
   include ActionCable::TestHelper
@@ -29,7 +30,7 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
   test "dispatch endpoint updates car and returns car plus event" do
     car = create_funicontrol_line.cars.first
 
-    post "/api/cars/#{car.id}/dispatch", params: { action: "emergency_stop", reason: "test" }, as: :json
+    post "/api/cars/#{car.id}/dispatch", params: {action: "emergency_stop", reason: "test"}, as: :json
 
     assert_response :success
     assert_equal "emergency", response.parsed_body["car"]["status"]
@@ -41,7 +42,7 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     car = line.cars.find_by!(code: "car_a")
 
     post "/api/lines/#{line.id}/dispatch",
-      params: { action: "start", car_id: 45, code: "car_a", reason: "line scoped" },
+      params: {action: "start", car_id: 45, code: "car_a", reason: "line scoped"},
       as: :json
 
     assert_response :success
@@ -53,22 +54,39 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     line = create_funicontrol_line
 
     post "/api/cars/999999/dispatch",
-      params: { action: "stop", line_id: line.id, code: "car_a" },
+      params: {action: "stop", line_id: line.id, code: "car_a"},
       as: :json
     assert_response :not_found
 
     post "/api/lines/#{line.id}/dispatch",
-      params: { action: "start" },
+      params: {action: "start"},
       as: :json
     assert_response :bad_request
     assert response.parsed_body["errors"]["base"].first.include?("car_id or code")
+  end
+
+  test "unknown domain actions return json errors" do
+    line = create_funicontrol_line
+    car = line.cars.first
+    station = line.stations.first
+
+    post "/api/cars/#{car.id}/dispatch", params: {action: "launch"}, as: :json
+    assert_response :bad_request
+    assert response.parsed_body["errors"]["base"].first.include?("Unknown dispatch action")
+
+    post "/api/lines/#{line.id}/stations/#{station.id}/raise_alert", params: {}, as: :json
+    assert_response :bad_request
+    assert response.parsed_body["errors"]["base"].first.include?("Reason is required")
+
+    post "/api/lines/#{line.id}/stations/999999/clear_alert", params: {reason: "clear"}, as: :json
+    assert_response :not_found
   end
 
   test "line suspend and resume endpoints update status and record events" do
     line = create_funicontrol_line
 
     assert_broadcasts("line_#{line.id}", 1) do
-      post "/api/lines/#{line.id}/suspend", params: { reason: "wind" }, as: :json
+      post "/api/lines/#{line.id}/suspend", params: {reason: "wind"}, as: :json
     end
     assert_response :success
     assert_equal "suspended", response.parsed_body["line"]["status"]
@@ -76,20 +94,20 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     assert_equal "wind", response.parsed_body["event"]["payload"]["reason"]
 
     assert_broadcasts("line_#{line.id}", 1) do
-      post "/api/lines/#{line.id}/resume", params: { reason: "clear" }, as: :json
+      post "/api/lines/#{line.id}/resume", params: {reason: "clear"}, as: :json
     end
     assert_response :success
     assert_equal "normal", response.parsed_body["line"]["status"]
     assert_equal "line_resumed", response.parsed_body["event"]["event_type"]
 
     assert_broadcasts("line_#{line.id}", 1) do
-      post "/api/lines/#{line.id}/enter_maintenance", params: { reason: "inspection" }, as: :json
+      post "/api/lines/#{line.id}/enter_maintenance", params: {reason: "inspection"}, as: :json
     end
     assert_response :success
     assert_equal "maintenance", response.parsed_body["line"]["status"]
 
     assert_broadcasts("line_#{line.id}", 1) do
-      post "/api/lines/#{line.id}/exit_maintenance", params: { reason: "done" }, as: :json
+      post "/api/lines/#{line.id}/exit_maintenance", params: {reason: "done"}, as: :json
     end
     assert_response :success
     assert_equal "normal", response.parsed_body["line"]["status"]
@@ -101,7 +119,7 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
 
     assert_broadcasts("line_#{line.id}", 1) do
       post "/api/lines/#{line.id}/stations/#{station.id}/raise_alert",
-        params: { reason: "crowding" },
+        params: {reason: "crowding"},
         as: :json
     end
     assert_response :success
@@ -111,7 +129,7 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
 
     assert_broadcasts("line_#{line.id}", 1) do
       post "/api/lines/#{line.id}/stations/#{station.id}/clear_alert",
-        params: { reason: "handled" },
+        params: {reason: "handled"},
         as: :json
     end
     assert_response :success
@@ -119,19 +137,19 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     assert_equal "station_alert_cleared", response.parsed_body["event"]["event_type"]
 
     post "/api/lines/#{line.id}/stations/#{station.id}/mark_crowded",
-      params: { reason: "platform" },
+      params: {reason: "platform"},
       as: :json
     assert_response :success
     assert_equal "crowded", response.parsed_body["station"]["status"]
 
     post "/api/lines/#{line.id}/stations/#{station.id}/close",
-      params: { reason: "inspection" },
+      params: {reason: "inspection"},
       as: :json
     assert_response :success
     assert_equal "closed", response.parsed_body["station"]["status"]
 
     post "/api/lines/#{line.id}/stations/#{station.id}/reopen",
-      params: { reason: "clear" },
+      params: {reason: "clear"},
       as: :json
     assert_response :success
     assert_equal "normal", response.parsed_body["station"]["status"]
@@ -141,7 +159,7 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     line = create_funicontrol_line
 
     post "/api/lines/#{line.id}/incidents",
-      params: { kind: "inspection", severity: "high", title: "Track noise", description: "near middle" },
+      params: {kind: "inspection", severity: "high", title: "Track noise", description: "near middle"},
       as: :json
     assert_response :created
     incident_id = response.parsed_body["id"]
@@ -159,7 +177,7 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     assert_equal "acknowledged", response.parsed_body["status"]
 
     post "/api/incidents/#{incident_id}/incident_comments",
-      params: { author_name: "operator", body: "Crew notified" },
+      params: {author_name: "operator", body: "Crew notified"},
       as: :json
     assert_response :created
     assert_equal "Crew notified", response.parsed_body["body"]
@@ -193,6 +211,57 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     incident = Incident.find(body["id"])
     assert incident.attachments.attached?
     assert_equal "incident_photo.txt", incident.attachments.first.filename.to_s
+    assert_nil body["thumbnail_url"]
+
+    delete "/api/incidents/#{body["id"]}/attachments/#{incident.attachments.first.id}"
+    assert_response :success
+    assert_not Incident.find(body["id"]).attachments.attached?
+  end
+
+  test "image incident urls are same-origin paths and include thumbnails" do
+    line = create_funicontrol_line
+    photo = fixture_file_upload("incident_photo.txt", "image/png")
+
+    post "/api/lines/#{line.id}/incidents",
+      params: {
+        kind: "inspection",
+        severity: "low",
+        title: "Image report",
+        description: "attached",
+        photo: photo
+      }
+
+    assert_response :created
+    body = response.parsed_body
+    attachment = body["attachments"].first
+
+    assert body["photo_url"].start_with?("/rails/active_storage/blobs/")
+    assert body["thumbnail_url"].start_with?("/rails/active_storage/representations/")
+    assert attachment["url"].start_with?("/rails/active_storage/blobs/")
+    assert attachment["thumbnail_url"].start_with?("/rails/active_storage/representations/")
+    assert_not body["photo_url"].include?("://")
+    assert_not body["thumbnail_url"].include?("://")
+  end
+
+  test "incident attachments reject oversized uploads" do
+    line = create_funicontrol_line
+    file = Tempfile.new(["large-incident", ".txt"])
+    file.binmode
+    file.write("x" * (Incident::MAX_ATTACHMENT_SIZE + 1))
+    file.rewind
+
+    post "/api/lines/#{line.id}/incidents",
+      params: {
+        kind: "inspection",
+        title: "Oversized report",
+        photo: Rack::Test::UploadedFile.new(file.path, "text/plain")
+      }
+
+    assert_response :unprocessable_entity
+    assert response.parsed_body["errors"]["attachments"].present?
+  ensure
+    file&.close
+    file&.unlink
   end
 
   test "operation events support line log query and schemas are available" do
@@ -207,11 +276,11 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
 
     get "/api/lines/#{line.id}/operation_events?after_id=#{older_event.id}"
     assert_response :success
-    assert_equal [ newer_event.id ], response.parsed_body.map { |event| event["id"] }
+    assert_equal [newer_event.id], response.parsed_body.map { |event| event["id"] }
 
     get "/api/lines/#{line.id}/operation_events?order=asc"
     assert_response :success
-    assert_equal [ older_event.id, newer_event.id ], response.parsed_body.map { |event| event["id"] }.last(2)
+    assert_equal [older_event.id, newer_event.id], response.parsed_body.map { |event| event["id"] }.last(2)
 
     get "/api/lines/#{line.id}/operation_events?since=not-a-time"
     assert_response :bad_request
@@ -228,12 +297,12 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
   test "weather reports and scenario import endpoints work" do
     line = create_funicontrol_line
 
-    post "/api/lines/#{line.id}/weather", params: { weather_condition: "fog", reason: "visibility" }, as: :json
+    post "/api/lines/#{line.id}/weather", params: {weather_condition: "fog", reason: "visibility"}, as: :json
     assert_response :success
     assert_equal "fog", response.parsed_body["line"]["weather_condition"]
     assert_equal "line_weather_changed", response.parsed_body["event"]["event_type"]
 
-    get "/api/reports/daily", params: { line_id: line.id, date: Date.current.iso8601 }
+    get "/api/reports/daily", params: {line_id: line.id, date: Date.current.iso8601}
     assert_response :success
     assert_equal line.id, response.parsed_body["line_id"]
     assert response.parsed_body["payload"]["event_counts"].present?
@@ -244,7 +313,7 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
         events: [
           {
             event_type: "operator_message_sent",
-            payload: { message: "Replay note" },
+            payload: {message: "Replay note"},
             occurred_at: Time.current.iso8601
           }
         ]
@@ -254,10 +323,50 @@ class FunicontrolApiTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.parsed_body["imported_count"]
   end
 
+  test "resolved incidents reject further state changes and comments" do
+    line = create_funicontrol_line
+
+    post "/api/lines/#{line.id}/incidents",
+      params: {kind: "inspection", severity: "high", title: "Closed case", description: "done"},
+      as: :json
+    assert_response :created
+    incident_id = response.parsed_body["id"]
+
+    post "/api/incidents/#{incident_id}/resolve"
+    assert_response :success
+
+    patch "/api/incidents/#{incident_id}", params: {title: "Reopened"}, as: :json
+    assert_response :bad_request
+
+    post "/api/incidents/#{incident_id}/acknowledge"
+    assert_response :bad_request
+
+    post "/api/incidents/#{incident_id}/incident_comments",
+      params: {author_name: "operator", body: "late note"},
+      as: :json
+    assert_response :bad_request
+  end
+
+  test "line slugs and car codes can be used as stable api identifiers" do
+    line = create_funicontrol_line
+    car = line.cars.first
+
+    get "/api/lines/#{line.slug}"
+    assert_response :success
+    assert_equal line.id, response.parsed_body["id"]
+
+    get "/api/lines/#{line.slug}/operation_events"
+    assert_response :success
+
+    get "/api/cars/#{car.code}", params: {line_id: line.slug}
+    assert_response :success
+    assert_equal car.id, response.parsed_body["id"]
+  end
+
   test "validation errors use the unified errors object" do
     line = create_funicontrol_line
 
-    post "/api/lines/#{line.id}/incidents", params: { kind: "other" }, as: :json
+    post "/api/lines/#{line.id}/incidents", params: {kind: "other"}, as: :json
 
     assert_response :unprocessable_entity
     assert response.parsed_body["errors"]["title"].present?

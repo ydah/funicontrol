@@ -8,6 +8,8 @@ module Api
 
     def create
       incident = Incident.find(params[:incident_id])
+      raise ArgumentError, "Resolved incidents cannot receive comments" if incident.status == "resolved"
+
       comment = incident.incident_comments.build(comment_params)
 
       if comment.save
@@ -17,7 +19,7 @@ module Api
           acknowledged = true
         end
         ack_event = acknowledged ? acknowledgement_event(incident) : nil
-        event = OperationEvent.create!(
+        event = RecordOperationEvent.call(
           line: incident.line,
           incident:,
           event_type: "comment_created",
@@ -44,7 +46,7 @@ module Api
     end
 
     def acknowledgement_event(incident)
-      OperationEvent.create!(
+      RecordOperationEvent.call(
         line: incident.line,
         incident:,
         event_type: "incident_acknowledged",

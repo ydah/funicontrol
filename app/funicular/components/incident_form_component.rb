@@ -28,28 +28,28 @@ class IncidentFormComponent < ApplicationComponent
       form_for(:incident, on_submit: :handle_submit, class: "stack") do |f|
         field_group("Kind") do
           f.select(:kind, [
-            [ "lost_item", "Lost item" ],
-            [ "inspection", "Inspection" ],
-            [ "crowding", "Crowding" ],
-            [ "emergency_stop", "Emergency stop" ],
-            [ "weather", "Weather" ],
-            [ "other", "Other" ]
+            ["lost_item", "Lost item"],
+            ["inspection", "Inspection"],
+            ["crowding", "Crowding"],
+            ["emergency_stop", "Emergency stop"],
+            ["weather", "Weather"],
+            ["other", "Other"]
           ], class: "input")
         end
         field_group("Severity") do
           f.select(:severity, [
-            [ "low", "Low" ],
-            [ "medium", "Medium" ],
-            [ "high", "High" ],
-            [ "critical", "Critical" ]
+            ["low", "Low"],
+            ["medium", "Medium"],
+            ["high", "High"],
+            ["critical", "Critical"]
           ], class: "input")
         end
         field_group("Station") do
-          choices = [[ "", "Unassigned" ]] + (props[:stations] || []).map { |station| [ value(station, :id).to_s, value(station, :name).to_s ] }
+          choices = [["", "Unassigned"]] + (props[:stations] || []).map { |station| [value(station, :id).to_s, value(station, :name).to_s] }
           f.select(:station_id, choices, class: "input")
         end
         field_group("Car") do
-          choices = [[ "", "Unassigned" ]] + (props[:cars] || []).map { |car| [ value(car, :id).to_s, value(car, :name).to_s ] }
+          choices = [["", "Unassigned"]] + (props[:cars] || []).map { |car| [value(car, :id).to_s, value(car, :name).to_s] }
           f.select(:car_id, choices, class: "input")
         end
         field_group("Title") do
@@ -104,7 +104,7 @@ class IncidentFormComponent < ApplicationComponent
         Funicular::HTTP.expire_cache("/api/lines/#{props[:line_id]}/incidents")
         patch(incident: default_incident, is_submitting: false, errors: {})
         JS.global[photo_global_key.to_sym] = nil
-        props[:on_created].call(response["data"]) if props[:on_created]
+        props[:on_created]&.call(response["data"])
       else
         patch(is_submitting: false, errors: normalize_errors(response["data"]["errors"]))
       end

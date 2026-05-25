@@ -10,6 +10,33 @@ class LineChannelTest < ActionCable::Channel::TestCase
     assert_has_stream "line_#{line.id}"
   end
 
+  test "subscribes to a line stream by slug" do
+    line = create_funicontrol_line
+
+    subscribe line_id: line.slug
+
+    assert subscription.confirmed?
+    assert_has_stream "line_#{line.id}"
+  end
+
+  test "rejects invalid line subscriptions" do
+    subscribe line_id: "missing-line"
+
+    assert subscription.rejected?
+  end
+
+  test "second subscription catches the current line stream" do
+    line = create_funicontrol_line
+
+    subscribe line_id: line.id
+    assert subscription.confirmed?
+    unsubscribe
+
+    subscribe line_id: line.id
+    assert subscription.confirmed?
+    assert_has_stream "line_#{line.id}"
+  end
+
   test "dispatch updates a car and broadcasts operation event" do
     line = create_funicontrol_line
     car = line.cars.first

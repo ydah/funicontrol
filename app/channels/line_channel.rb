@@ -1,6 +1,7 @@
 class LineChannel < ApplicationCable::Channel
   def subscribed
-    reject unless line
+    return reject unless line
+
     stream_from stream_name
   end
 
@@ -22,7 +23,8 @@ class LineChannel < ApplicationCable::Channel
     message = data["message"].to_s.strip
     raise ArgumentError, "message is required" if message.blank?
 
-    event = line.operation_events.create!(
+    event = RecordOperationEvent.call(
+      line:,
       event_type: "operator_message_sent",
       payload: {
         message:,
@@ -32,7 +34,7 @@ class LineChannel < ApplicationCable::Channel
     )
     LineBroadcaster.broadcast_operator_message(line:, event:)
   rescue ArgumentError => e
-    transmit({ type: "dispatch_error", errors: { base: [ e.message ] } })
+    transmit({type: "dispatch_error", errors: {base: [e.message]}})
   end
 
   private
@@ -47,7 +49,7 @@ class LineChannel < ApplicationCable::Channel
 
     LineBroadcaster.broadcast_operation_event(line:, car: result.car, event: result.event)
   rescue ActiveRecord::RecordNotFound, ArgumentError => e
-    transmit({ type: "dispatch_error", errors: { base: [ e.message ] } })
+    transmit({type: "dispatch_error", errors: {base: [e.message]}})
   end
 
   def dispatch_car_for(data)
@@ -71,7 +73,11 @@ class LineChannel < ApplicationCable::Channel
   end
 
   def line
-    @line ||= Line.find_by(id: params[:line_id])
+    @line ||= if params[:line_id].to_s.match?(/\A\d+\z/)
+      Line.find_by(id: params[:line_id])
+    else
+      Line.find_by(slug: params[:line_id])
+    end
   end
 
   def stream_name

@@ -11,9 +11,9 @@ class Line < ApplicationRecord
 
   validates :name, :slug, :status, :weather_condition, presence: true
   validates :slug, uniqueness: true
-  validates :status, inclusion: { in: STATUSES }
-  validates :weather_condition, inclusion: { in: WEATHER_CONDITIONS }
-  validates :passenger_satisfaction_score, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
+  validates :status, inclusion: {in: STATUSES}
+  validates :weather_condition, inclusion: {in: WEATHER_CONDITIONS}
+  validates :passenger_satisfaction_score, numericality: {only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100}
 
   def open_critical_incidents_count
     incidents.where(status: %w[open acknowledged], severity: "critical").count

@@ -3,15 +3,15 @@ Rails.application.routes.draw do
 
   mount ActionCable.server => "/cable"
 
-  get "up" => "rails/health#show", as: :rails_health_check
-  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+  get "up" => "rails/health#show", :as => :rails_health_check
+  get "manifest" => "rails/pwa#manifest", :as => :pwa_manifest
+  get "service-worker" => "rails/pwa#service_worker", :as => :pwa_service_worker
 
   namespace :api do
     get "schema/:id", to: "schemas#show"
     resources :schemas, only: :show
 
-    resources :lines, only: [ :index, :show ] do
+    resources :lines, only: [:index, :show] do
       post :suspend, on: :member
       post :resume, on: :member
       post :enter_maintenance, on: :member
@@ -29,7 +29,7 @@ Rails.application.routes.draw do
         end
         resources :cars, only: :index
       end
-      resources :incidents, only: [ :index, :create ]
+      resources :incidents, only: [:index, :create]
       resources :operation_events, only: :index
     end
 
@@ -37,10 +37,11 @@ Rails.application.routes.draw do
       post :dispatch, on: :member, action: :dispatch_car
     end
 
-    resources :incidents, only: [ :index, :show, :update ] do
+    resources :incidents, only: [:index, :show, :update] do
       post :acknowledge, on: :member
       post :resolve, on: :member
-      resources :incident_comments, only: [ :index, :create ]
+      delete "attachments/:attachment_id", on: :member, action: :purge_attachment
+      resources :incident_comments, only: [:index, :create]
     end
 
     get "reports/daily", to: "reports#daily"

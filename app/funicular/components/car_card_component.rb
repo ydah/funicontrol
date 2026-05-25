@@ -19,7 +19,9 @@ class CarCardComponent < ApplicationComponent
     div(class: "#{s.card(status.to_sym)}#{selected_class}", onclick: -> { select_car(car) }) do
       div(class: "row spread") do
         h3 { value(car, :name).to_s }
-        span(class: "status-chip") { props[:selected] ? "Selected" : status_label(status) }
+        span(class: "status-chip #{"stale-chip" if value(car, :stale).to_s == "true"}") do
+          props[:selected] ? "Selected" : stale_status_label(car, status)
+        end
       end
       div(class: "metric-grid") do
         metric("Position", "#{percent_position(car)}%")
@@ -46,7 +48,7 @@ class CarCardComponent < ApplicationComponent
   end
 
   def select_car(car)
-    props[:on_select].call(object_id(car)) if props[:on_select]
+    props[:on_select]&.call(object_id(car))
   end
 
   def next_station_name(car)
@@ -59,5 +61,9 @@ class CarCardComponent < ApplicationComponent
     return "-" if seconds <= 0
 
     "#{seconds}s"
+  end
+
+  def stale_status_label(car, status)
+    (value(car, :stale).to_s == "true") ? "Stale" : status_label(status)
   end
 end

@@ -33,6 +33,20 @@ class DispatchCarTest < ActiveSupport::TestCase
     end
   end
 
+  test "emergency and inspection states guard restart" do
+    car = create_funicontrol_line.cars.first
+    car.update!(status: "emergency", speed: 0, direction: "idle", operation_mode: "inspection")
+
+    assert_raises(ArgumentError) do
+      DispatchCar.call(car:, action: "start", reason: "unsafe")
+    end
+
+    DispatchCar.call(car:, action: "recover")
+    assert_raises(ArgumentError) do
+      DispatchCar.call(car:, action: "start", reason: "needs inspection")
+    end
+  end
+
   test "unknown action raises argument error" do
     car = create_funicontrol_line.cars.first
 

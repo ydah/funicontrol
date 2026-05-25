@@ -17,7 +17,7 @@ module Api
     end
 
     def show
-      line = Line.includes(:stations, :cars, :track_segments).find(params[:id])
+      line = Line.includes(:stations, :cars, :track_segments).find(find_line(params[:id]).id)
       render json: LineSerializer.render(line, include_stations: true, include_cars: true, include_track_segments: true)
     end
 
@@ -38,7 +38,7 @@ module Api
     end
 
     def set_weather
-      line = Line.find(params[:id])
+      line = find_line(params[:id])
       result = SetLineWeather.call(line:, weather_condition: params[:weather_condition], reason: params[:reason])
       LineBroadcaster.broadcast_line_status_updated(line: result.line, event: result.event)
 
@@ -49,7 +49,7 @@ module Api
     end
 
     def dispatch_car
-      line = Line.find(params[:id])
+      line = find_line(params[:id])
       car = dispatch_car_for(line)
       result = DispatchCar.call(car:, action: dispatch_payload[:action], reason: dispatch_payload[:reason])
       LineBroadcaster.broadcast_operation_event(line:, car: result.car, event: result.event)
@@ -63,7 +63,7 @@ module Api
     private
 
     def update_status(action)
-      line = Line.find(params[:id])
+      line = find_line(params[:id])
       result = SetLineStatus.call(line:, action:, reason: params[:reason])
       LineBroadcaster.broadcast_line_status_updated(line: result.line, event: result.event)
 

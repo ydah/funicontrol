@@ -1,6 +1,6 @@
 class IncidentIndexComponent < ApplicationComponent
   def initialize_state
-    { incidents: [], is_loading: true, error: nil }
+    {incidents: [], is_loading: true, error: nil}
   end
 
   def component_mounted

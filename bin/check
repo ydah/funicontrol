@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+require_relative "../config/boot"
+
+ENV["RUBOCOP_CACHE_ROOT"] ||= "tmp/rubocop_cache"
+ENV["BRAKEMAN_ENSURE_LATEST"] ||= "0"
+
+checks = [
+  [ "Security: Gem audit", [ "bin/bundler-audit" ] ],
+  [ "Security: Brakeman", [ "bin/brakeman", "--quiet", "--no-pager", "--exit-on-warn", "--exit-on-error" ] ],
+  [ "Style: Standard", [ "bundle", "exec", "standardrb" ] ],
+  [ "Compile: Funicular", [ "bin/rails", "funicular:compile" ] ],
+  [ "Tests: Rails", [ "bin/rails", "test" ] ]
+]
+
+checks.each do |label, command|
+  puts "\n== #{label}"
+  unless system(*command)
+    warn "#{label} failed"
+    exit 1
+  end
+end

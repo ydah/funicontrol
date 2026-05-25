@@ -8,7 +8,7 @@ class Car < Funicular::Model
       line_id: current_line_id || line_id,
       code: code
     }) do |response|
-      block.call(response) if block
+      block&.call(response)
     end
   end
 end

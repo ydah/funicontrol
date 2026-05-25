@@ -21,8 +21,8 @@ class AddOperationalControlsToFunicontrol < ActiveRecord::Migration[8.1]
 
       t.timestamps
     end
-    add_index :track_segments, [ :line_id, :start_position, :end_position ]
-    add_index :track_segments, [ :line_id, :kind ]
+    add_index :track_segments, [:line_id, :start_position, :end_position]
+    add_index :track_segments, [:line_id, :kind]
 
     create_table :daily_reports do |t|
       t.references :line, null: false, foreign_key: true
@@ -31,6 +31,6 @@ class AddOperationalControlsToFunicontrol < ActiveRecord::Migration[8.1]
 
       t.timestamps
     end
-    add_index :daily_reports, [ :line_id, :report_date ], unique: true
+    add_index :daily_reports, [:line_id, :report_date], unique: true
   end
 end
